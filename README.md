@@ -45,3 +45,10 @@ Free to set up and trial. Free Supabase projects pause after 7 days without use,
 - Data is stored per member, so two people working on different members never clash; if two people change the same member at once, each person's own changed fields are kept and merged.
 - Without signing in (or with `config.js` blank) the tools run in **Local only** mode: data stays in that browser — use Save backup / Load backup.
 - `Load backup` while signed in as an Editor replaces the team's copy (after a confirmation).
+
+## Change log
+- **2026-10-28** — Scopes (project / phase member lists, e.g. client-nominated repair members): highlight on the model, list with progress, CSV export. Stored in the existing shared record — no database change.
+- **2026-10-28** — Fix: defects could not be saved on a member after its data was loaded from the shared database. Fix: defect list reading count now updates as readings are entered.
+
+## Updating the app
+Upload the new `ssl.html` and `nsl.html` to the repository (Add file → Upload files, replace existing) and commit. GitHub Pages republishes in 1–2 minutes. Users press Ctrl+F5 (Cmd+Shift+R on Mac) to load the new version. Data in Supabase is untouched.
