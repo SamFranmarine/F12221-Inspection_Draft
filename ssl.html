@@ -1,0 +1,2525 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>*,*::before,*::after{box-sizing:border-box}[hidden]{display:none!important}header a.home{font:600 11px var(--font-mono);color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:3px;padding:2px 6px}
+</style>
+<title>SSL Inspection ITP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: full-height app — 3D viewport left, reference panel right (stacks below on phones). Navy drafting palette from the Franmarine documents. */
+:root{
+  --bg:#eef1f5; --panel:#ffffff; --fg:#14213a; --muted:#5a6780; --line:#d3d9e3;
+  --navy:#002060; --accent:#0b5cad; --tagbg:rgba(255,255,255,.92); --scene:#e7ebf1;
+  --font-ui:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1220; --panel:#121a2c; --fg:#e4e9f2; --muted:#93a0b8; --line:#26324a;
+  --navy:#8fb3ff; --accent:#6aa8ff; --tagbg:rgba(14,21,36,.9); --scene:#0f1729; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1220; --panel:#121a2c; --fg:#e4e9f2; --muted:#93a0b8; --line:#26324a;
+  --navy:#8fb3ff; --accent:#6aa8ff; --tagbg:rgba(14,21,36,.9); --scene:#0f1729; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:14px;margin:0}
+.app{height:100%;display:grid;grid-template-columns:minmax(0,1fr) 410px;grid-template-rows:auto minmax(0,1fr)}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{margin:0;font-size:18px;font-weight:700;color:var(--navy);letter-spacing:.01em;text-wrap:balance}
+header .ref{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.view{position:relative;min-width:0;min-height:0;overflow:hidden;background:var(--scene)}
+.view canvas{display:block;width:100%;height:100%}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-family:var(--font-mono);font-size:11px;line-height:1.25;
+  padding:1px 5px;border-radius:2px;background:var(--tagbg);color:var(--fg);border-left:3px solid var(--c,#888);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tag.l{transform:translate(-100%,-50%)}
+.tag.r{transform:translate(0,-50%)}
+.tag.big{font-family:var(--font-ui);font-weight:600;font-size:12px;letter-spacing:.02em}
+.tag.dim{font-size:10px;opacity:.9}
+.presets{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 20px)}
+.presets button{font:600 12px var(--font-ui);letter-spacing:.03em;text-transform:uppercase;padding:6px 10px;border-radius:3px;border:1px solid var(--line);
+  background:var(--panel);color:var(--fg);cursor:pointer}
+.presets button[aria-pressed="true"]{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+.presets button:focus-visible,.layers input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:8px;font-size:11px;color:var(--muted)}
+aside{min-width:0;overflow:auto;background:var(--panel);border-left:1px solid var(--line);
+  padding-block:14px 24px;padding-left:16px;padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px;align-content:start}
+aside h2{margin:0 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--navy)}
+aside p{margin:0;color:var(--muted);line-height:1.45}
+.layers{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.layers label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.key{display:grid;gap:5px}
+.key div{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:center}
+.sw{width:22px;height:12px;border-radius:2px;border:1px solid rgba(0,0,0,.15)}
+.sw.dash{background:repeating-linear-gradient(90deg,#d62828 0 5px,transparent 5px 8px);border:none;height:3px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.id{font-family:var(--font-mono);font-weight:600;white-space:nowrap}
+td.sec{color:var(--muted);white-space:nowrap}
+.note{border-left:3px solid #e9a23b;padding:6px 10px;background:color-mix(in srgb,#e9a23b 10%,transparent);color:var(--fg);line-height:1.45;font-size:12.5px}
+
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin:-14px -16px 0;padding:0 16px;position:sticky;top:-14px;background:var(--panel);z-index:2}
+.tabs button{font:600 12px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:12px 12px 10px;border:none;background:none;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--navy)}
+.tabpane{display:grid;gap:18px;align-content:start}
+.tabpane[hidden]{display:none}
+.mem-pick{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+.mem-row{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;gap:6px;margin-bottom:10px}
+.mem-row select{font:600 13px var(--font-ui);padding:7px 6px;border:1px solid var(--navy);border-radius:3px;background:var(--panel);color:var(--fg);min-width:0;box-sizing:border-box;width:100%}
+.mem-row button{font:700 16px var(--font-ui);border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg);cursor:pointer}
+.mem-switch{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:3px;overflow:hidden;margin-bottom:10px}
+.mem-switch button{font:600 12px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:8px 4px;border:none;background:var(--panel);color:var(--fg);cursor:pointer}
+.mem-switch button+button{border-left:1px solid var(--line)}
+.mem-switch button[aria-pressed="true"]{background:var(--navy);color:var(--panel)}
+.mem-title{font-size:15px!important;letter-spacing:.02em!important;text-transform:none!important;margin-bottom:8px!important}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.form label{display:grid;gap:3px;font-size:11.5px;color:var(--muted);min-width:0}
+.form input,.form select,.pop input,table.ut input{box-sizing:border-box}
+.form input,.form select,.pop input{font:13px var(--font-mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:6px 7px;width:100%;min-width:0}
+.form input:focus,.form select:focus,.pop input:focus,.ut input:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+.small{font-size:11.5px;color:var(--muted);line-height:1.45;margin:6px 0 0}
+.warn{color:#b26b00}
+.sum{margin:0 0 8px;font-size:12.5px;line-height:1.5}
+.sum .bad{color:#d62828}
+.tblwrap{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:3px}
+table.ut{font-size:12px;border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+table.ut th,table.ut td{border-bottom:1px solid var(--line);padding:2px 3px;text-align:center}
+table.ut thead th{position:sticky;top:0;background:var(--panel);font-size:10.5px;letter-spacing:.05em;color:var(--muted);padding:6px 3px;z-index:1}
+table.ut tbody th{font:600 11.5px var(--font-mono);text-align:left;padding-left:6px;white-space:nowrap}
+table.ut td.pos{font:11px var(--font-mono);color:var(--muted);white-space:nowrap}
+table.ut input{width:100%;min-width:0;font:12.5px var(--font-mono);text-align:center;border:1px solid transparent;background:transparent;color:var(--fg);padding:4px 2px;border-radius:2px}
+table.ut input:hover{border-color:var(--line)}
+[data-c="ok"]{background:color-mix(in srgb,#2e9e4f 14%,transparent)!important}
+[data-c="low"]{background:color-mix(in srgb,#d62828 22%,transparent)!important;color:#b01c1c!important;font-weight:600}
+[data-c="high"]{background:color-mix(in srgb,#e9a23b 25%,transparent)!important}
+td.mn{font:600 12px var(--font-mono)}
+td.empty{padding:14px;color:var(--muted)}
+.rem-dot{color:#e9a23b;margin-left:2px}
+.actions button,.pop button{font:600 12px var(--font-ui);letter-spacing:.03em;padding:8px 10px;border-radius:3px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.actions button.primary,.pop button:not(.ghost){background:var(--navy);color:var(--panel);border-color:var(--navy);width:100%;font-size:13px;padding:10px}
+.pop button:not(.ghost){width:auto;font-size:12px;padding:7px 10px}
+.actions button:disabled{opacity:.6;cursor:progress}
+.actions button.danger{color:#c0392b}
+.actions button.armed{background:#c0392b;color:#fff;border-color:#c0392b}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pop{position:absolute;z-index:5;width:250px;max-width:calc(100% - 16px);background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:3px;padding:10px;display:grid;gap:5px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+.pop[hidden]{display:none}
+.pop-head{font:600 12px var(--font-mono);color:var(--navy)}
+.pop label{font-size:11px;color:var(--muted)}
+.pop #pop-val{font-size:18px;padding:6px 8px}
+.pop-act{display:flex;gap:6px;margin-top:4px}
+.pop-hint{font-size:10.5px;color:var(--muted)}
+.toast{position:absolute;left:50%;bottom:calc(30px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(560px,calc(100% - 32px));background:var(--navy);color:var(--panel);padding:8px 14px;border-radius:3px;font-size:13px;z-index:6;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast[data-bad="1"]{background:#b01c1c;color:#fff}
+.toast[hidden]{display:none}
+
+#df-sec .dbtn{font:600 12px var(--font-ui);letter-spacing:.03em;padding:8px 10px;border-radius:3px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+#df-sec .dbtn.primary{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+#df-sec .dbtn.armed,#df-list button.armed{background:#c0392b;color:#fff;border-color:#c0392b}
+#df-add{width:100%;margin-top:8px}
+.dlist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.dlist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;align-items:stretch}
+.dlist li.empty{display:block;color:var(--muted);font-size:12.5px}
+.dlist button{font:12px var(--font-ui);border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg);cursor:pointer;padding:6px 8px;text-align:left}
+.dlist li.on .dsel{border-color:#3fa34d;box-shadow:inset 3px 0 0 #3fa34d}
+.dlist .dsel b{font-family:var(--font-mono);margin-right:4px}
+.dlist .dsel span{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.dlist .dsel em{color:#b26b00;font-style:normal;font-weight:600}
+.dform{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:3px;background:var(--bg)}
+.dform h3{margin:0 0 8px;font-size:13px;color:var(--navy)}
+.form label.wide{grid-column:1/-1}
+.form label[hidden]{display:none}
+.dwarn{margin:4px 0 8px;padding-left:18px;color:#b26b00;font-size:12px;line-height:1.4}
+.dwarn:empty{display:none}
+#df-extra{margin-bottom:8px}
+table.dt{font-size:11px}
+table.dt th,table.dt td{padding:1px 1px}
+table.dt thead th.hit{background:color-mix(in srgb,#3fa34d 30%,transparent);color:var(--fg)}
+table.dt tbody th.dz{color:#1f7a36}
+table.dt tbody th.lz{color:#8a6d00}
+table.dt input{font-size:11px;padding:3px 0}
+details.rules{margin-top:10px;font-size:12px}
+details.rules summary{cursor:pointer;color:var(--muted)}
+details.rules .form{margin-top:8px}
+
+.place-hint{position:absolute;left:50%;top:56px;transform:translateX(-50%);z-index:6;max-width:calc(100% - 24px);background:#ff2d55;color:#fff;font-size:12.5px;padding:7px 12px;border-radius:3px;box-shadow:0 4px 14px rgba(0,0,0,.2);text-align:center}
+.place-hint[hidden]{display:none}
+.place-hint kbd{font:600 11px var(--font-mono);background:rgba(255,255,255,.22);border-radius:2px;padding:0 4px}
+.tag.prev-tag{transform:none;--c:#ff2d55;font-weight:600}
+.tag.prev-tag[hidden]{display:none}
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 62vh auto;height:auto}
+  html,body{height:auto}
+  aside{border-left:none;border-top:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .hint{display:none}
+}
+
+/* How to tab */
+.how p{margin:8px 0 0;line-height:1.5}
+.how .steps,.how .tips{margin:8px 0 0;padding-left:20px;display:grid;gap:7px;line-height:1.45}
+.how kbd{font:600 11px var(--font-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--bg)}
+.dg{display:block;width:100%;height:auto;margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:4px}
+.dg .t{fill:var(--fg);font-family:var(--font-mono);font-size:10px}
+.dg .s{font-size:10px}.dg .xs{font-size:8.5px}.dg .c{text-anchor:middle}.dg .e{text-anchor:end}.dg .m{fill:var(--muted)}.dg .b2{font-weight:700}.dg .b{font-weight:700;fill:#d62828}
+.dg .steel{fill:#9aa6b8;fill-opacity:.35;stroke:var(--muted);stroke-width:1}
+.dg .cvi{fill:#2f8cff;fill-opacity:.18;stroke:none}
+.dg .rings line{stroke:var(--fg);stroke-width:1.4}
+.dg .grid line{stroke:var(--fg);stroke-opacity:.45;stroke-width:.8}
+.dg .pt circle{fill:#0b5cad;stroke:var(--panel);stroke-width:1}
+.dg .pt .p12{fill:#d62828}
+.dg .datum{stroke:#d62828;stroke-width:1.5;stroke-dasharray:4 3}
+.dg .arw{stroke:var(--fg);stroke-width:1.2;fill:none}.dg .ahd{fill:var(--fg)}
+.dg .za{fill:#f2c230;fill-opacity:.45}.dg .zd{fill:#3fa34d;fill-opacity:.4}.dg .zx{fill:#ef7d22;fill-opacity:.5}
+.dg .hole{fill:#0b0d10;stroke:#0b0d10}
+.dg .edge{fill:#d62828;stroke:var(--panel);stroke-width:1}
+.dg .dash{fill:none;stroke:#d62828;stroke-width:1.2;stroke-dasharray:5 3}
+.dg .dim{stroke:var(--fg);stroke-width:1;marker-start:url(#ah);marker-end:url(#ah)}
+.kv{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+.kv th{text-align:left;vertical-align:top;width:34%;padding:5px 8px 5px 0;border-top:1px solid var(--line);color:var(--navy)}
+.kv td{padding:5px 0;border-top:1px solid var(--line);line-height:1.45}
+.sw2{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px}
+.sw2.ok{background:#2e9e4f}.sw2.low{background:#d62828}.sw2.hi{background:#e9a23b}.sw2.no{background:#0b5cad}
+
+/* additional inspection points */
+#xp-sec .dbtn{font:600 12px var(--font-ui);letter-spacing:.03em;padding:8px 10px;border-radius:3px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+#xp-sec .dbtn.primary{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+#xp-sec .dbtn.armed,#xp-body button.armed{background:#c0392b;color:#fff;border-color:#c0392b}
+#xp-add{width:100%;margin-top:8px}
+table.xt td.xnote{font-size:11px;color:var(--muted);text-align:left;line-height:1.3}
+table.xt td.xnote b{color:var(--fg);font-weight:600}
+table.xt td.xact{white-space:nowrap}
+table.xt td.xact button{font:600 10.5px var(--font-ui);padding:3px 6px;margin-left:2px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg);cursor:pointer}
+table.xt tbody th{color:#b0279f}
+table.xt td.empty{font-size:11.5px;color:var(--muted);text-align:left;padding:6px}
+table.ut input.rd.moved{border:1px dashed #9aa6b8}
+table.ut input.rd.moved::placeholder{color:#b0279f;opacity:1}
+
+/* layers control on the model */
+.layer-ctl{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;z-index:4}
+.layer-ctl>button{font:600 12px var(--font-ui);letter-spacing:.03em;text-transform:uppercase;padding:6px 10px;border-radius:3px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.layer-ctl>button[aria-expanded="true"]{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+.layer-pop{position:absolute;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:4px;box-shadow:0 6px 18px rgba(0,0,0,.18);padding:10px 12px;display:grid;gap:7px;min-width:230px}
+.layer-pop[hidden]{display:none}
+.layer-pop label{display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13px;white-space:nowrap}
+.layer-pop .lh{font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.layer-pop .lrow{display:flex;gap:6px;margin-top:4px}
+.layer-pop .lrow button{flex:1;font:600 11px var(--font-ui);padding:5px 6px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg);cursor:pointer}
+
+/* AppHub presence + banner + confirm */
+.ah-pill{margin-left:auto;align-self:center;font:600 11px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px 3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ah-pill::before{content:"";width:8px;height:8px;border-radius:50%;background:#8a94a6}
+.ah-pill[data-s="live"]{color:#1f7a36;border-color:#9fd3ae}.ah-pill[data-s="live"]::before{background:#2e9e4f}
+.ah-pill[data-s="off"]{color:#9a6400;border-color:#f0cf8a}.ah-pill[data-s="off"]::before{background:#e9a23b}
+.ah-banner{font-size:12px;line-height:1.4;padding:7px 10px;border-radius:3px;background:var(--bg);border:1px solid var(--line);color:var(--muted);margin:0}
+.ah-banner.err{background:#fdecea;border-color:#f3b6b0;color:#9b1c13}
+.ah-confirm{position:fixed;inset:0;background:rgba(10,16,30,.45);display:grid;place-items:center;z-index:50;padding:16px}
+.ah-confirm[hidden]{display:none}
+.ah-confirm>div{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;max-width:420px;width:100%;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.ah-confirm p{margin:0 0 14px;line-height:1.45}
+.ah-confirm .row{display:flex;gap:8px;justify-content:flex-end}
+.ah-confirm button{font:600 12px var(--font-ui);padding:8px 12px;border-radius:3px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.ah-confirm button#ah-ok{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+
+/* unique point ID strip in entry boxes */
+.pop-id{font:700 15px var(--font-mono);letter-spacing:.02em;color:#fff;background:var(--navy);border-radius:3px;padding:5px 8px;margin:-2px 0 2px;user-select:all;word-break:break-all}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pop-id{color:#0c1220}}
+:root[data-theme="dark"] .pop-id{color:#0c1220}
+
+/* sign-in gate, access tab, view-only mode */
+.tabs button{padding:12px 9px 10px;white-space:nowrap;letter-spacing:.04em}
+.sg{position:fixed;inset:0;z-index:60;background:rgba(10,16,30,.55);display:grid;place-items:center;padding:16px}
+.sg[hidden]{display:none}
+.sg-card{background:var(--panel);color:var(--fg);border-radius:6px;border-top:4px solid var(--navy);max-width:420px;width:100%;padding:20px;box-shadow:0 16px 48px rgba(0,0,0,.35);display:grid;gap:10px}
+.sg-card h2{margin:0;font-size:17px;color:var(--navy)}
+.sg-card p{margin:0;line-height:1.5;color:var(--fg)}
+.sg-card label{font-size:12px;color:var(--muted)}
+.sg-card input{font:15px var(--font-ui);padding:9px 10px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--fg);width:100%}
+.sg-primary{font:600 13px var(--font-ui);padding:10px;border-radius:3px;border:1px solid var(--navy);background:var(--navy);color:var(--panel);cursor:pointer}
+.sg-msg{color:#b01c1c;font-size:12.5px;min-height:1em}
+.linkbtn{font:12px var(--font-ui);background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0;justify-self:start}
+#tab-access .dbtn{font:600 12px var(--font-ui);padding:8px 14px;border-radius:3px;border:1px solid var(--navy);background:var(--navy);color:var(--panel);cursor:pointer}
+table.acc{font-size:12.5px}
+table.acc td{vertical-align:middle}
+table.acc td.acc-email{font-family:var(--font-mono);font-size:12px;word-break:break-all}
+table.acc .acc-note{display:block;font-family:var(--font-ui);color:var(--muted);font-size:11px}
+table.acc select{font:12px var(--font-ui);padding:4px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg)}
+table.acc button{font:600 11px var(--font-ui);padding:4px 8px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:#c0392b;cursor:pointer}
+table.acc button.armed{background:#c0392b;color:#fff}
+body.viewer #df-add, body.viewer .dedit, body.viewer .ddel, body.viewer #xp-add, body.viewer .xedit, body.viewer .xdel, body.viewer #pop-move,
+body.viewer #pop-next, body.viewer #dp-next, body.viewer #xp-save, body.viewer #btn-load, body.viewer #btn-clear, body.viewer #df-form,
+body.viewer #xp-form, body.viewer details.rules{display:none!important}
+body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;cursor:default}
+</style>
+
+<div class="app">
+  <header>
+    <h1>SSL Inspection ITP</h1>
+    <a class="home" href="./" title="Back to the project page">F12221</a>
+    <span class="ref">South Ship Loader · F12221-ITP-002 · FZ-GDN UT Inspection Rev 0 · Plan after drawing 63X30Z/M61 (reference only) and site photos</span>
+    <span class="ah-pill" id="ah-pill" data-s="local" role="status" aria-live="polite">Local only</span>
+  </header>
+  <div class="view" id="view">
+    <canvas id="c" aria-label="3D model of the SSL support modules with UT inspection markings"></canvas>
+    <div id="labels"></div>
+    <div class="presets" role="group" aria-label="Views">
+      <button data-view="initial">Initial Inspection</button>
+      <button data-view="defects">Defect Record</button>
+    </div>
+    <div class="layer-ctl">
+      <button type="button" id="lay-btn" aria-expanded="false" aria-controls="lay-pop">Layers</button>
+      <div class="layer-pop" id="lay-pop" hidden role="group" aria-label="Model layers">
+        <div class="lh">Inspection</div>
+        <label><input type="checkbox" id="L-rings" checked> Initial inspection points</label>
+        <label><input type="checkbox" id="L-defx" checked> Recorded defects</label>
+        <div class="lh">Structure</div>
+        <label><input type="checkbox" id="L-context" checked> Structure</label>
+        <label><input type="checkbox" data-g="deck" checked> Deck and seabed</label>
+        <div class="lh">Reference</div>
+        <label><input type="checkbox" data-g="orient" checked> Orientation and grid labels</label>
+        <label><input type="checkbox" data-g="tide" checked> Tidal levels (LAT, HAT)</label>
+        <label><input type="checkbox" data-g="zbar" checked> Zones and survey extent</label>
+        <label><input type="checkbox" data-g="lvl" checked> Elevation labels</label>
+        <div class="lrow"><button type="button" id="lay-all">Show all</button><button type="button" id="lay-min">Members only</button></div>
+      </div>
+    </div>
+    <div class="hint">Click any blue UT point to enter a reading · drag to rotate · right-drag to pan · scroll to zoom</div>
+    <div class="pop" id="pop" hidden role="dialog" aria-label="Enter UT reading">
+      <div class="pop-head" id="pop-head"></div>
+      <label for="pop-val">Wall thickness (mm)</label>
+      <input id="pop-val" inputmode="decimal" autocomplete="off">
+      <label for="pop-rem">Ring remark (optional)</label>
+      <input id="pop-rem" autocomplete="off" placeholder="e.g. coating, no reading at 6">
+      <div class="pop-act"><button type="button" id="pop-next">Save and next</button><button type="button" id="pop-move" class="ghost" title="Reading taken somewhere else — move this point">Move…</button><button type="button" id="pop-close" class="ghost">Close</button></div>
+      <div class="pop-hint">Enter = save and next point · Shift+Enter = previous · Esc = close</div>
+    </div>
+    <div class="pop" id="dpop" hidden role="dialog" aria-label="Enter defect reading">
+      <div class="pop-head" id="dp-head"></div>
+      <label for="dp-val">Wall thickness (mm)</label>
+      <input id="dp-val" inputmode="decimal" autocomplete="off">
+      <div class="pop-act"><button type="button" id="dp-next">Save and next</button><button type="button" id="dp-close" class="ghost">Close</button></div>
+      <div class="pop-hint">Enter = save and next position · Esc = close</div>
+    </div>
+    <div class="pop" id="xpop" hidden role="dialog" aria-label="Additional point reading">
+      <div class="pop-head" id="xp-head"></div>
+      <label for="xp-val">Wall thickness (mm)</label>
+      <input id="xp-val" inputmode="decimal" autocomplete="off">
+      <label for="xp-note">Note (optional)</label>
+      <input id="xp-note" autocomplete="off" placeholder="e.g. moved clear of clamp">
+      <div class="pop-act"><button type="button" id="xp-save">Save</button><button type="button" id="xp-close" class="ghost">Close</button></div>
+      <div class="pop-hint">Enter = save · Esc = close</div>
+    </div>
+    <div class="sg" id="sg" hidden role="dialog" aria-modal="true" aria-labelledby="sg-title">
+      <div class="sg-card">
+        <h2 id="sg-title">F12221 Inspection ITP — sign in</h2>
+        <div id="sg-form" hidden>
+          <p>Enter your email address and we'll send you a sign-in link. Franmarine addresses can edit; other users need to be added by the Franmarine team first.</p>
+          <label for="sg-email">Email address</label>
+          <input id="sg-email" type="email" autocomplete="email" placeholder="name@company.com">
+          <button type="button" id="sg-send" class="sg-primary">Email me a sign-in link</button>
+          <p class="sg-msg" id="sg-msg" role="alert"></p>
+          <button type="button" id="sg-local" class="linkbtn">Continue without signing in (this browser only)</button>
+        </div>
+        <div id="sg-sent" hidden>
+          <p>Check your inbox at <b id="sg-sent-to"></b> and open the link on this device. It may take a minute; check junk mail too.</p>
+          <button type="button" id="sg-retry" class="linkbtn">Use a different address</button>
+        </div>
+        <div id="sg-denied" hidden>
+          <p><b id="sg-denied-as"></b> doesn't have access to this project yet. Ask your Franmarine contact to add you in the Access tab, then sign in again.</p>
+          <button type="button" id="sg-out" class="sg-primary">Sign out</button>
+        </div>
+        <div id="sg-wait" hidden><p>Checking your access…</p></div>
+      </div>
+    </div>
+    <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+    <div class="ah-confirm" id="ah-confirm" hidden role="dialog" aria-modal="true" aria-labelledby="ah-confirm-msg"><div><p id="ah-confirm-msg"></p><div class="row"><button type="button" id="ah-cancel">Cancel</button><button type="button" id="ah-ok">Continue</button></div></div></div>
+  </div>
+  <aside>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="entry" aria-selected="true">UT data entry</button>
+      <button role="tab" data-tab="ref" aria-selected="false">Reference</button>
+      <button role="tab" data-tab="how" aria-selected="false">How to</button>
+      <button role="tab" data-tab="access" aria-selected="false" hidden>Access</button>
+    </div>
+    <div id="tab-entry" class="tabpane">
+      <p class="ah-banner" id="ah-banner" role="status">Your data is saved in this browser only. Use Save backup to keep a copy.</p>
+      <section>
+        <label class="mem-pick" for="mem-sel">Member (click any UT point in the model, or choose here)</label>
+        <div class="mem-row"><button type="button" id="mem-prev" aria-label="Previous member">‹</button><select id="mem-sel"></select><button type="button" id="mem-next" aria-label="Next member">›</button></div>
+        <h2 class="mem-title" id="mem-title"></h2>
+        <div class="form" id="form-member"></div>
+        <p class="small" id="ext-note"></p>
+        <p class="small warn" id="ring-warn" hidden>More than 40 rings. The ITP holds 40; only the first 40 are shown and exported.</p>
+      </section>
+      <section>
+        <h2>Inspection</h2>
+        <div class="form" id="form-common"></div>
+      </section>
+      <section>
+        <h2>Initial UT readings — 4 points per ring (mm)</h2>
+        <p class="sum" id="sum"></p>
+        <div class="tblwrap">
+          <table class="ut">
+            <thead><tr><th>Ring</th><th id="pos-head">Pos.</th><th>12</th><th>3</th><th>6</th><th>9</th><th>Min</th></tr></thead>
+            <tbody id="ut-body"></tbody>
+          </table>
+        </div>
+      </section>
+      <section id="xp-sec">
+        <h2>Additional inspection points</h2>
+        <p class="small">Add a reading anywhere on the member, or move a pre-filled point that can't be read where it is (clamp, anode, weld, access). A moved point turns grey and its reading follows it to the new location.</p>
+        <div class="tblwrap"><table class="ut xt"><thead><tr><th>Pt</th><th>Pos.</th><th>Clock</th><th>WT</th><th>Note</th><th></th></tr></thead><tbody id="xp-body"></tbody></table></div>
+        <button type="button" id="xp-add" class="dbtn primary">+ Add point</button>
+        <div id="xp-form" class="dform" hidden>
+          <h3 id="xp-title">New inspection point</h3>
+          <div class="form">
+            <label for="xp-pos" id="xp-pos-l">Position<input id="xp-pos" inputmode="decimal" autocomplete="off"></label>
+            <label for="xp-clock">Clock position<select id="xp-clock"><option value="0">12</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option></select></label>
+            <label for="xp-from" class="wide">Replaces pre-filled point<select id="xp-from"></select></label>
+            <label for="xp-fval">Wall thickness (mm)<input id="xp-fval" inputmode="decimal" autocomplete="off"></label>
+            <label for="xp-fnote">Note / reason<input id="xp-fnote" autocomplete="off" placeholder="e.g. clear of clamp"></label>
+          </div>
+          <div class="btnrow"><button type="button" id="xp-place" class="dbtn">Pick on model</button><button type="button" id="xp-fsave" class="dbtn primary">Save point</button><button type="button" id="xp-cancel" class="dbtn">Cancel</button></div>
+        </div>
+      </section>
+      <section id="df-sec">
+        <h2>Defects on this member</h2>
+        <ul class="dlist" id="df-list"></ul>
+        <button type="button" id="df-add" class="dbtn primary">+ Add defect</button>
+        <div id="df-form" class="dform" hidden>
+          <h3 id="df-title">New defect</h3>
+          <div class="form">
+            <label for="df-type">Type<select id="df-type"><option value="hole">Through-wall hole</option><option value="wallloss" selected>Wall loss / corrosion</option><option value="pitting">Pitting (single pit)</option><option value="crack">Crack</option><option value="dent">Dent / deformation</option></select></label>
+            <label for="df-pos" id="df-pos-l">Centre position<input id="df-pos" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-clock">Clock position of centre (0–12)<input id="df-clock" inputmode="decimal" autocomplete="off" placeholder="e.g. 4.5"></label>
+            <label for="df-ax">Axial length (mm)<input id="df-ax" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-cw">Circumferential width (mm)<input id="df-cw" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-len">Crack length (mm)<input id="df-len" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-ang">Crack angle to member axis (°)<input id="df-ang" inputmode="decimal" autocomplete="off" placeholder="0 = along, 90 = around"></label>
+            <label for="df-dia">Pit diameter (mm)<input id="df-dia" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-depth">Depth (mm)<input id="df-depth" inputmode="decimal" autocomplete="off"></label>
+            <label for="df-note" class="wide">Note<input id="df-note" autocomplete="off"></label>
+          </div>
+          <div class="btnrow"><button type="button" id="df-place" class="dbtn">Pick on model</button><button type="button" id="df-save" class="dbtn primary">Save defect</button><button type="button" id="df-cancel" class="dbtn">Cancel</button></div>
+        </div>
+        <div id="df-detail" hidden>
+          <p class="sum" id="df-sum"></p>
+          <ul class="dwarn" id="df-warn"></ul>
+          <div class="form" id="df-extra"></div>
+          <div class="tblwrap"><table class="ut dt"><thead><tr id="df-head"></tr></thead><tbody id="df-body"></tbody></table></div>
+          <p class="small">Shaded columns fall within the visible defect. Click a point in the model or type here; Enter moves to the next cell. Readings export to this defect's D-S sheet.</p>
+        </div>
+        <details class="rules"><summary>Defect grid rules — FUZE inspection framework [TBC]</summary><div class="form" id="df-rules"></div></details>
+      </section>
+      <section class="actions">
+        <h2>Export</h2>
+        <button type="button" id="btn-itp" class="primary">Export to ITP workbook</button>
+        <p class="small">Select this member's ITP file (F12221-ITP-002). The Cover member details, Member Survey Sections B and C, the Section H ring grid (including additional points) and a Point Register sheet listing every point ID are filled, and a completed copy is saved. Re-exporting replaces the ring grid.</p>
+        <p class="small" id="export-note"></p>
+        <div class="btnrow"><button type="button" id="btn-csv">Export CSV</button><button type="button" id="btn-backup">Save backup</button><button type="button" id="btn-load">Load backup</button><button type="button" id="btn-clear" class="danger">Clear readings</button></div>
+        <p class="small ah-local-note">Readings save automatically in this browser on this device. Save a backup file at the end of each shift.</p>
+        <input type="file" id="file-itp" accept=".xlsx" hidden>
+        <input type="file" id="file-backup" accept=".json,application/json" hidden>
+      </section>
+    </div>
+    <div id="tab-how" class="tabpane how" hidden>
+      <section>
+        <h2>Workflow</h2>
+        <ol class="steps">
+          <li><b>Select the member.</b> Click any blue UT point on it, or choose it in the member list on the UT data entry tab. One member = one ITP workbook.</li>
+          <li><b>Set it up.</b> Enter the Member ID, OD, WT and fit-for-service limit, then the measured length (braces) or inspect-from / to elevations (legs and piles). The rings regenerate to suit.</li>
+          <li><b>Initial inspection.</b> Full-length CVI, then UT at 12, 3, 6 and 9 o'clock on every ring (template 1). Red = below the fit-for-service limit.</li>
+          <li><b>Record each defect</b> found in the CVI or flagged by a red reading. The tool lays out the detail grid around it (template 3), or the node grid if it's near a member end (template 4).</li>
+          <li><b>Take the defect readings.</b> Click points in the model or type in the defect table.</li>
+          <li><b>Export to the ITP workbook</b> and save a backup at the end of each shift.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>1 · Initial inspection template</h2>
+        <svg class="dg" viewBox="0 0 380 170" role="img" aria-label="Member with rings every 500 mm and four UT points per ring">
+          <rect x="34" y="52" width="300" height="46" rx="4" class="steel"/>
+          <rect x="34" y="52" width="300" height="46" rx="4" class="cvi"/>
+          <line x1="34" y1="40" x2="34" y2="112" class="datum"/>
+          <text x="34" y="36" class="t xs c">Datum</text>
+          <g class="rings">
+            <line x1="34" y1="52" x2="34" y2="98"/><line x1="94" y1="52" x2="94" y2="98"/><line x1="154" y1="52" x2="154" y2="98"/>
+            <line x1="214" y1="52" x2="214" y2="98"/><line x1="274" y1="52" x2="274" y2="98"/><line x1="334" y1="52" x2="334" y2="98"/>
+          </g>
+          <g class="pt"><circle cx="34" cy="52" r="3.6"/><circle cx="34" cy="75" r="3.6"/><circle cx="34" cy="98" r="3.6"/>
+            <circle cx="94" cy="52" r="3.6"/><circle cx="94" cy="75" r="3.6"/><circle cx="94" cy="98" r="3.6"/>
+            <circle cx="154" cy="52" r="3.6"/><circle cx="154" cy="75" r="3.6"/><circle cx="154" cy="98" r="3.6"/>
+            <circle cx="214" cy="52" r="3.6"/><circle cx="214" cy="75" r="3.6"/><circle cx="214" cy="98" r="3.6"/>
+            <circle cx="274" cy="52" r="3.6"/><circle cx="274" cy="75" r="3.6"/><circle cx="274" cy="98" r="3.6"/>
+            <circle cx="334" cy="52" r="3.6"/><circle cx="334" cy="75" r="3.6"/><circle cx="334" cy="98" r="3.6"/></g>
+          <g class="t s c"><text x="34" y="126">R01</text><text x="94" y="126">R02</text><text x="154" y="126">R03</text><text x="214" y="126">R04</text><text x="274" y="126">R05</text><text x="334" y="126">R06</text></g>
+          <g class="t xs c m"><text x="34" y="138">0</text><text x="94" y="138">500</text><text x="154" y="138">1000</text><text x="214" y="138">1500</text><text x="274" y="138">2000</text><text x="334" y="138">end</text></g>
+          <line x1="60" y1="156" x2="130" y2="156" class="arw" marker-end="url(#ah)"/><text x="136" y="160" class="t s">+ axial (mm from datum)</text>
+          <text x="342" y="57" class="t xs">12</text><text x="342" y="79" class="t xs">3 / 9</text><text x="342" y="102" class="t xs">6</text>
+          <text x="190" y="18" class="t s c">Ring every 500 mm + closing ring · 4 UT points per ring</text>
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="ahd"/></marker></defs>
+        </svg>
+        <p>Legs and piles use elevation instead: rings on a 500 mm grid referenced to LAT, numbered upward, with a ring at each end. The light blue band in the model is the full-length CVI extent.</p>
+      </section>
+
+      <section>
+        <h2>2 · Clock positions</h2>
+        <svg class="dg" viewBox="0 0 380 178" role="img" aria-label="Clock conventions for vertical members and braces">
+          <g transform="translate(95,78)">
+            <circle r="44" class="steel"/>
+            <g class="pt"><circle cx="0" cy="-44" r="4" class="p12"/><circle cx="-44" cy="0" r="3.6"/><circle cx="0" cy="44" r="3.6"/><circle cx="44" cy="0" r="3.6"/></g>
+            <text x="0" y="-52" class="t s c b">12</text><text x="54" y="4" class="t s">3</text><text x="0" y="62" class="t s c">6</text><text x="-54" y="4" class="t s e">9</text>
+            <path d="M 23 -28 A 36 36 0 0 1 35 -8" class="arw" marker-end="url(#ah)"/>
+            <text x="0" y="4" class="t xs c">viewed from</text><text x="0" y="15" class="t xs c">above</text>
+          </g>
+          <text x="95" y="156" class="t s c b2">Legs / piles</text><text x="95" y="169" class="t xs c">12 = reference face [TBC]</text>
+          <g transform="translate(285,78)">
+            <circle r="44" class="steel"/>
+            <g class="pt"><circle cx="0" cy="-44" r="4" class="p12"/><circle cx="44" cy="0" r="3.6"/><circle cx="0" cy="44" r="3.6"/><circle cx="-44" cy="0" r="3.6"/></g>
+            <text x="0" y="-52" class="t s c b">12 top</text><text x="54" y="4" class="t s">3</text><text x="0" y="62" class="t s c">6</text><text x="-54" y="4" class="t s e">9</text>
+            <path d="M 23 -28 A 36 36 0 0 1 35 -8" class="arw" marker-end="url(#ah)"/>
+            <text x="0" y="4" class="t xs c">looking along</text><text x="0" y="15" class="t xs c">+ axial</text>
+          </g>
+          <text x="285" y="156" class="t s c b2">Braces</text><text x="285" y="169" class="t xs c">12 = top of member</text>
+        </svg>
+      </section>
+
+      <section>
+        <h2>3 · Recording a defect</h2>
+        <ol class="steps">
+          <li>On the UT data entry tab, under <i>Defects on this member</i>, click <b>+ Add defect</b> and choose the type.</li>
+          <li>Click <b>Pick on model</b>. The cursor is free: a red marker shows the position and clock under it. Drag rotates, right-drag pans and scroll zooms as usual — only a click places. <kbd>Esc</kbd> cancels. Click the member to set the location, or type it in.</li>
+          <li>Enter the size: axial length × circumferential width (hole, wall loss, dent), diameter and depth (pit), or length and angle to the axis (crack). Save.</li>
+          <li>Read the warnings. A landing that runs off the member, or a grid within 300 mm of a member end, means the node rules apply.</li>
+        </ol>
+        <svg class="dg" viewBox="0 0 380 220" role="img" aria-label="Defect template: landing A, defect zone and landing B on the unrolled member surface">
+          <text x="190" y="14" class="t s c">Unrolled member surface — axial position across, clock around</text>
+          <rect x="40" y="24" width="96" height="144" class="za"/><rect x="136" y="24" width="112" height="144" class="zd"/><rect x="248" y="24" width="96" height="144" class="za"/>
+          <g class="t xs m e"><text x="34" y="28">12</text><text x="34" y="64">3</text><text x="34" y="100">6</text><text x="34" y="136">9</text><text x="34" y="171">12</text></g>
+          <g class="grid">
+            <line x1="56" y1="24" x2="56" y2="168"/><line x1="88" y1="24" x2="88" y2="168"/><line x1="120" y1="24" x2="120" y2="168"/>
+            <line x1="150" y1="24" x2="150" y2="168"/><line x1="178" y1="24" x2="178" y2="168"/><line x1="206" y1="24" x2="206" y2="168"/><line x1="234" y1="24" x2="234" y2="168"/>
+            <line x1="264" y1="24" x2="264" y2="168"/><line x1="296" y1="24" x2="296" y2="168"/><line x1="328" y1="24" x2="328" y2="168"/>
+          </g>
+                    <rect x="172" y="72" width="40" height="38" rx="5" class="hole"/>
+          <circle cx="226" cy="91" r="4" class="edge"/><circle cx="158" cy="91" r="4" class="edge"/><circle cx="192" cy="62" r="4" class="edge"/><circle cx="192" cy="120" r="4" class="edge"/>
+          <g class="t xs"><text x="222" y="84">+ax</text><text x="140" y="84">−ax</text><text x="198" y="58">CCW</text><text x="198" y="132">CW</text></g>
+          <rect x="166" y="66" width="52" height="50" class="dash"/>
+          <g class="t xs c"><text x="56" y="182">LA1</text><text x="88" y="182">LA2</text><text x="120" y="182">LA3</text><text x="150" y="182">D1</text><text x="178" y="182">D2</text><text x="206" y="182">D3</text><text x="234" y="182">D4</text><text x="264" y="182">LB1</text><text x="296" y="182">LB2</text><text x="328" y="182">LB3</text></g>
+          <g class="t s c"><text x="88" y="200">Landing A</text><text x="192" y="200">Defect zone</text><text x="296" y="200">Landing B</text></g>
+          <g class="t xs c m"><text x="88" y="213">300 mm @ 100</text><text x="192" y="213">defect + 50 margin @ 50</text><text x="296" y="213">300 mm @ 100</text></g>
+        </svg>
+        <p>Every station is a full ring of 12 positions (the D-S sheet grid). The defect's clock span is shaded on the member and in the defect table. Spacings are defaults until FUZE confirms them; change them under <i>Defect grid rules</i>.</p>
+        <table class="kv">
+          <tr><th>Through-wall hole</th><td>Hole outline + 4 edge readings (+ax, −ax, CW, CCW) at the edge offset. Exports to the D-S hole table.</td></tr>
+          <tr><th>Wall loss</th><td>Zone and landing grid only. Mark the region boundary at the FFS limit on site and record it in the D-S region table.</td></tr>
+          <tr><th>Pitting</th><td>Pit gauge depth and UT remaining wall at the centre + 4 readings around it. Exports to the pitting log.</td></tr>
+          <tr><th>Crack</th><td>Line with both tips marked; confirm length by MT or ACFM. UT is taken on the grid either side.</td></tr>
+          <tr><th>Dent</th><td>Caliper OD at 12–6 and 3–9 across the dent + dent depth, with the UT grid.</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>4 · Node template (defects near a member end)</h2>
+        <svg class="dg" viewBox="0 0 380 200" role="img" aria-label="Node template: chord sides A and B, intersection band and brace rings">
+          <rect x="160" y="10" width="44" height="180" class="steel"/>
+          <rect x="20" y="88" width="140" height="28" class="steel"/><rect x="204" y="88" width="166" height="28" class="steel"/>
+          <rect x="160" y="80" width="44" height="44" class="zx"/>
+          <rect x="160" y="26" width="44" height="50" class="za"/><rect x="160" y="128" width="44" height="50" class="za"/>
+          <rect x="96" y="88" width="62" height="28" class="za"/><rect x="206" y="88" width="62" height="28" class="za"/>
+          <g class="rings"><line x1="160" y1="36" x2="204" y2="36"/><line x1="160" y1="52" x2="204" y2="52"/><line x1="160" y1="68" x2="204" y2="68"/>
+            <line x1="160" y1="136" x2="204" y2="136"/><line x1="160" y1="152" x2="204" y2="152"/><line x1="160" y1="168" x2="204" y2="168"/>
+            <line x1="148" y1="88" x2="148" y2="116"/><line x1="128" y1="88" x2="128" y2="116"/><line x1="108" y1="88" x2="108" y2="116"/>
+            <line x1="216" y1="88" x2="216" y2="116"/><line x1="236" y1="88" x2="236" y2="116"/><line x1="256" y1="88" x2="256" y2="116"/></g>
+          <g class="t xs"><text x="210" y="40">CA3</text><text x="210" y="56">CA2</text><text x="210" y="72">CA1</text><text x="210" y="140">CB1</text><text x="210" y="156">CB2</text><text x="210" y="172">CB3</text></g>
+          <g class="t xs c"><text x="148" y="130">B1-1</text><text x="122" y="130">B1-2</text><text x="98" y="130">B1-3</text><text x="216" y="82">B2-1</text><text x="240" y="82">B2-2</text><text x="264" y="82">B2-3</text></g>
+          <line x1="150" y1="80" x2="150" y2="26" class="dim"/><text x="146" y="54" class="t xs e">≥300</text>
+          <text x="372" y="40" class="t s e">Chord side A</text><text x="372" y="80" class="t s e">Intersection X</text><text x="372" y="172" class="t s e">Chord side B</text>
+          <text x="20" y="80" class="t xs m">Brace 1 — from weld toe</text><text x="270" y="130" class="t xs m">Brace 2</text>
+        </svg>
+        <p>Chord rings extend at least 300 mm from the brace face on each side, rings run across the intersection band, and each brace is read from its weld toe outward. Node defects are recorded on the D-N sheet. The tool flags them, but node grids aren't generated automatically yet.</p>
+      </section>
+
+      <section>
+        <h2>5 · Entering readings</h2>
+        <ul class="tips">
+          <li><b>Moving the model:</b> drag rotates, right-drag pans, scroll zooms. The same controls apply while placing a defect or point with <i>Pick on model</i>: a click places it, a drag moves the model. On a tablet, normal touch gestures apply.</li>
+          <li>Click a point: the entry box opens at it. <kbd>Enter</kbd> saves and moves to the next point, <kbd>Shift</kbd>+<kbd>Enter</kbd> goes back, <kbd>Esc</kbd> closes.</li>
+          <li>Or type in the ring table (initial) or the defect table. Enter moves to the next cell.</li>
+          <li><b>Layers</b> (top right of the model) turns the structure, deck, orientation, tidal levels, zones and labels on or off. Your choice is remembered in this browser.</li>
+          <li><b>Point IDs.</b> Every inspection point has a unique ID, shown at the top of its entry box (e.g. <code>N/1-35/1000/12</code>: structure / member / ring position / clock; additional points end <code>/AP01</code>, defect points <code>/DS01/D3/04</code>). Write it on the member beside the reading so photos can be matched. The export adds a <i>Point Register</i> sheet listing every ID with its reading.</li>
+          <li>Blank means no reading; add a ring remark explaining why (coating, clamp, no access).</li>
+          <li><b>Point can't be read where it's marked?</b> Click it, choose <b>Move…</b>, then click where the reading was actually taken. The original turns grey, the reading moves with it, and the workbook records the move in the ring remarks.</li>
+          <li><b>Extra readings</b> (around a low reading, a pit cluster, a weld): <i>Additional inspection points</i> › <b>+ Add point</b>, then Pick on model or type the position and clock. They show as purple diamonds, AP01, AP02…</li>
+          <li>Colours: <span class="sw2 ok"></span> OK · <span class="sw2 low"></span> below the FFS limit · <span class="sw2 hi"></span> more than 10% over nominal (verify) · <span class="sw2 no"></span> not yet read.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>6 · Export and backup</h2>
+        <ul class="tips">
+          <li><b>Export to ITP workbook</b>: choose this member's F12221-ITP-002 file. The tool fills the Cover, the Member Survey (setup, ring readings, defect register) and one D-S sheet per defect (D-S02 onwards are copied from D-S01), then saves a completed copy.</li>
+          <li>Sign in with your email to share readings live with the team (green <i>Live</i> pill in the header). Franmarine users are Editors; other users are added by Franmarine in the <i>Access</i> tab as Viewers or Editors. Without signing in, readings save in this browser only (<i>Local only</i>). Use <b>Save backup</b> at the end of each shift; <b>Load backup</b> while signed in replaces the team's copy after you confirm.</li>
+          <li>Additional points go into the ring grid: in the ring's row if they share its position and the clock column is free, otherwise in their own AP rows after the rings (up to 40 rows in total).</li>
+          <li>Each member's data stays in this page until you clear it, so you can re-export after corrections.</li>
+        </ul>
+      </section>
+    </div>
+    <div id="tab-access" class="tabpane" hidden>
+      <section>
+        <h2>Access</h2>
+        <p class="small">Anyone with a <b>@franmarine.com.au</b> address is an Editor automatically. Everyone else must be added here before they can sign in — they start as a Viewer (sees live data, can export, can't change anything). Change the role to Editor to let them enter readings.</p>
+      </section>
+      <section>
+        <h2>Add a person</h2>
+        <div class="form">
+          <label for="acc-email" class="wide">Email address<input id="acc-email" type="email" autocomplete="off" placeholder="name@company.com"></label>
+          <label for="acc-new-role">Role<select id="acc-new-role"><option value="viewer" selected>Viewer</option><option value="editor">Editor</option></select></label>
+          <label for="acc-note">Company / note<input id="acc-note" autocomplete="off" placeholder="e.g. FUZE, engineer"></label>
+        </div>
+        <div class="btnrow"><button type="button" id="acc-add" class="dbtn primary">Add</button></div>
+      </section>
+      <section>
+        <h2>External users</h2>
+        <div class="tblwrap"><table class="acc"><thead><tr><th>Email</th><th>Role</th><th>Added by</th><th></th></tr></thead><tbody id="acc-body"></tbody></table></div>
+      </section>
+    </div>
+    <div id="tab-ref" class="tabpane" hidden>
+    <section>
+      <h2>Marking key</h2>
+      <div class="key">
+        <div><span class="sw" style="background:#f2c230"></span><span>Landing zone — sound steel, marked yellow</span></div>
+        <div><span class="sw" style="background:#3fa34d"></span><span>Defect zone — marked green</span></div>
+        <div><span class="sw" style="background:#ef7d22"></span><span>Node intersection band</span></div>
+        <div><span class="sw dash"></span><span>Defect region boundary — wall at FFS limit</span></div>
+        <div><span class="sw" style="background:#1d1f24"></span><span>Survey ring / station line</span></div>
+        <div><span class="sw" style="background:#0b5cad;border-radius:50%;width:12px;margin-left:5px"></span><span>Initial UT point — 4 per ring (12, 3, 6, 9) every 500 mm</span></div>
+        <div><span class="sw" style="background:#6fb6ff;opacity:.5"></span><span>Full-length CVI coverage</span></div>
+        <div><span class="sw" style="background:#b0279f;width:11px;height:11px;transform:rotate(45deg);margin-left:5px"></span><span>Additional inspection point (AP01…) — grey point = pre-filled point moved</span></div>
+        <div><span class="sw" style="background:#2f6fb5;opacity:.6"></span><span>Subsea · <b style="color:#1aa3a3">splash / tidal</b> · <b style="color:#8a94a6">atmospheric</b></span></div>
+      </div>
+    </section>
+    <section>
+      <h2>Naming convention</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Meaning</th><th>Record</th></tr></thead>
+        <tbody>
+          <tr><td class="id">NW, NE, SE, SW Module</td><td>The four leg structures, as the previous contractor's report (Section 5.2). The ships berth is to the west (NW and SW modules), the shore to the east.</td><td class="sec">Cover</td></tr>
+          <tr><td class="id">Grid Z, Y, X, W · 1–4</td><td>Gridlines. Rows Z → W run from the ships berth to the shore; columns 1 → 4 run north to south. Row gridlines are drawn looking west (legs 4, 3, 2, 1 left to right), as the report's Gridline X; column gridlines looking north [TBC].</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">X3-S4</td><td>Leg = gridline intersection (row + column), split into Sections 1–7 (bottom to top), after the engineer's model. Each section is one bay; the bolted splice flange sits just above the horizontal at the top of each section [TBC]. One ITP per leg section.</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">X-8</td><td>Brace on a gridline, numbered from 5 as the report: the band from the hub level (L6) down to L4 first, then the members above, then below. Within each: top down, horizontals before diagonals, left to right. X-5 to X-7 match the report's Gridline X; beyond that the engineer's model has X-bracing where the report drawing shows single diagonals, so the numbers differ [TBC].</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">Centre bay</td><td>Inner gridlines Y, X, 2 and 3 between modules. Above LAT: top horizontal (L7), horizontal through the octagonal hub (L6), four hub diagonals to L7 and L5, no bottom horizontal. Below LAT (engineer's model): horizontals at L3 and L1, diamond diagonals from the mid-span nodes to the legs at L2, and a mid-span vertical.</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">R01…</td><td>Initial inspection ring, every 500 mm with UT at 12, 3, 6 and 9 o'clock, plus a closing ring at the member end. Vertical: numbered upward, elevation in m rel. LAT. Horizontal and diagonal: mm from datum.</td><td class="sec">Survey H</td></tr>
+          <tr><td class="id">AP01…</td><td>Additional inspection point — extra reading, or a pre-filled point moved to suit site conditions.</td><td class="sec">Survey H</td></tr>
+          <tr><td class="id">12, 1…11</td><td>Clock position. Piles: 12 = reference face, clockwise viewed from above. Braces: 12 = top, clockwise looking along + axial.</td><td class="sec">All grids</td></tr>
+          <tr><td class="id">LA / LB</td><td>Landing stations either side of a straight defect.</td><td class="sec">D-S H, I</td></tr>
+          <tr><td class="id">D1…</td><td>Defect stations, inside the green zone.</td><td class="sec">D-S H</td></tr>
+          <tr><td class="id">H1…</td><td>Through-wall hole. Edge readings at +ax, −ax, CW, CCW.</td><td class="sec">D-S F</td></tr>
+          <tr><td class="id">P1…</td><td>Significant pit (&gt;2 mm deep and &gt;20 mm dia).</td><td class="sec">D-S K</td></tr>
+          <tr><td class="id">CA / CB</td><td>Chord rings each side of the node, ≥300 mm from brace face.</td><td class="sec">D-N H, I</td></tr>
+          <tr><td class="id">X1…</td><td>Intersection band rings across the brace footprints.</td><td class="sec">D-N H</td></tr>
+          <tr><td class="id">B1-n / B2-n</td><td>Rings on the members framing into the node, measured from the weld toe outward.</td><td class="sec">D-N H</td></tr>
+          <tr><td class="id">G1…</td><td>Gusset / hub plate reading points where a plate is fitted (e.g. the centre-bay octagonal hubs).</td><td class="sec">D-N J2</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <section>
+      <h2>Datums</h2>
+      <p>Legs: elevation in m rel. LAT, per section (splice to splice). Horizontals: mm from the weld toe at the left leg as drawn on the gridline elevation. Diagonals: mm from the lower end. Hub diagonals: mm from the hub plate edge. Node chord rings: mm from the brace face. SOW Section 4.2 extent (LAT − 2 m to HAT + 2 m) is shown for reference.</p>
+    </section>
+    <div class="note">Plan layout follows drawing 63X30Z/M61 (reference only): four 10′ × 10′ modules at the corners of a 40′ square. Naming follows the previous contractor's report (Section 5.2). Bracing follows the engineer's model: seven sections per tower with a horizontal at every level and X-bracing in every section, upper inter-tower bracing with octagonal hubs (also seen in the site photos) and lower inter-tower bracing below LAT. Levels are spread evenly between −8.50 and +6.10 m with LAT between L4 and L5; seabed −8.8 m, leg top +6.4 m — illustrative only [TBC]. Member sizes, HAT (+1.40 m) and the 12 o'clock reference face are open items. Defect grid spacings and landing lengths are defaults pending the FUZE inspection framework.</div>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+const V = (x,y,z)=>new THREE.Vector3(x,y,z);
+const view = document.getElementById('view');
+const canvas = document.getElementById('c');
+const labelLayer = document.getElementById('labels');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 200);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = false; controls.dampingFactor = 0.08;   // no drift after release, so the model stays where it is left
+
+function themeBg(){
+  const c = getComputedStyle(document.documentElement).getPropertyValue('--scene').trim() || '#e7ebf1';
+  scene.background = new THREE.Color(c);
+}
+themeBg();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeBg);
+new MutationObserver(themeBg).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(4,8,6); scene.add(sun);
+const fill = new THREE.DirectionalLight(0xffffff, 0.25); fill.position.set(-5,2,-4); scene.add(fill);
+
+// ---------- groups
+const G = {};
+['member','context','zones','rings'].forEach(k=>{G[k]=new THREE.Group(); scene.add(G[k]);});
+['tide','zbar','lvl'].forEach(k=>{G[k]=new THREE.Group(); G.zones.add(G[k]);});
+G.orient = new THREE.Group(); scene.add(G.orient); G.deck = new THREE.Group(); G.context.add(G.deck);
+
+// ---------- geometry — SSL support structure (m). Origin: centre of the four towers, LAT = 0.
+// Plan after drawing 63X30Z/M61 (reference only): four towers 10'-0" square (3.048 m) at the corners of a 40'-0" square (12.192 m),
+// circular girder centred between them. Bracing after the previous contractor's model and Gridline X elevation, checked against site photographs. Sizes and elevations [TBC].
+const FT = 0.3048;
+const RP = 0.2731/2, RH = 0.2191/2, RD = 0.2191/2;   // rendered radii only — SSL member sizes not on M61 [TBC]
+const HAT = 1.40;                         // illustrative [TBC]
+// Seven sections (bays) per tower after the engineer's model: eight horizontal levels L0 (bottom) to L7 (top) at equal spacing, LAT between L4 and L5 — all [TBC]
+const NSEC = 7, LV0 = -8.5, LV7 = 6.1, LSTEP = (LV7-LV0)/NSEC;
+const LV = Array.from({length:NSEC+1}, (_,i)=>+(LV0 + i*LSTEP).toFixed(3));   // LV[0] … LV[7]
+const LVL = {B:LV[0], T:LV[7]};
+const SEABED = -8.8, LEGTOP = 6.4;
+const FLG = 0.27;   // bolted splice flange sits just above the horizontal at each section top (site photos) [TBC]
+const SPL = LV.slice(1, NSEC).map(y=>+(y+FLG).toFixed(3));   // splices between Sections 1|2 … 6|7
+const TW = 10*FT, HALF = 20*FT;          // tower width 3.048, half of 40' square = 6.096
+const PY0 = SEABED, PY1 = LEGTOP;
+const paintMat = new THREE.MeshStandardMaterial({color:0xe6dfcb, roughness:.75, metalness:.05});
+const rustMat  = new THREE.MeshStandardMaterial({color:0xb4835f, roughness:.85, metalness:.05});
+const plateMat = new THREE.MeshStandardMaterial({color:0xd8d0b8, roughness:.7, metalness:.1});
+const deckMat  = new THREE.MeshStandardMaterial({color:0xd9c79c, roughness:.8, metalness:.05, transparent:true, opacity:.35});
+
+function cyl(a,b,r,mat,open,seg){
+  const d = new THREE.Vector3().subVectors(b,a), L = d.length();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,seg||40,1,!!open), mat);
+  m.position.copy(a).addScaledVector(d,.5);
+  m.quaternion.setFromUnitVectors(V(0,1,0), d.normalize());
+  return m;
+}
+function band(o,dir,s0,s1,r,color,op,grp){
+  const a=o.clone().addScaledVector(dir,s0), b=o.clone().addScaledVector(dir,s1);
+  grp.add(cyl(a,b,r,new THREE.MeshStandardMaterial({color,transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false,roughness:.9}),true));
+}
+function ring(o,dir,s,r,color,grp,t){
+  const m = new THREE.Mesh(new THREE.TorusGeometry(r,t||0.005,8,72), new THREE.MeshBasicMaterial({color}));
+  m.position.copy(o).addScaledVector(dir,s);
+  m.quaternion.setFromUnitVectors(V(0,0,1), dir.clone().normalize());
+  grp.add(m);
+}
+function clockPos(c,f,u,r,k){
+  const right = new THREE.Vector3().crossVectors(f,u).normalize();
+  const th = k*Math.PI/6;
+  return c.clone().addScaledVector(u, r*Math.cos(th)).addScaledVector(right, r*Math.sin(th));
+}
+const dotGeo = new THREE.SphereGeometry(0.009,10,8);
+function dots(c,f,u,r,color,grp){
+  const mat = new THREE.MeshBasicMaterial({color});
+  for(let k=0;k<12;k++){const s=new THREE.Mesh(dotGeo,mat); s.position.copy(clockPos(c,f,u,r,k)); grp.add(s);}
+}
+function line(pts,color,grp,dashed){
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const mat = dashed ? new THREE.LineDashedMaterial({color,dashSize:.03,gapSize:.02}) : new THREE.LineBasicMaterial({color});
+  const l = new THREE.Line(g,mat); if(dashed) l.computeLineDistances(); grp.add(l); return l;
+}
+function arrow(from,dir,len,color,grp,h){
+  grp.add(new THREE.ArrowHelper(dir.clone().normalize(), from, len, color, h||0.07, (h||0.07)*0.6));
+}
+function topOf(a){ const u = V(0,1,0).sub(a.clone().multiplyScalar(a.y)); return u.lengthSq()<1e-6 ? V(0,0,1) : u.normalize(); }
+// clock position (0–11) on a member that faces a given world direction (for markings the viewer should see)
+function faceK(c,f,u,dir){ let best=0, bv=-9; for(let k=0;k<12;k++){ const v = clockPos(c,f,u,1,k).sub(c).dot(dir); if(v>bv){bv=v;best=k;} } return best; }
+
+// ---------- labels (DOM, projected each frame; hidden with their group)
+const labels = [];
+function tag(text,pos,grp,color,cls,minor){
+  const el = document.createElement('div');
+  el.className = 'tag ' + (cls||'');
+  el.textContent = text;
+  if(color) el.style.setProperty('--c', color);
+  labelLayer.appendChild(el);
+  const o = new THREE.Object3D(); o.position.copy(pos); grp.add(o);
+  const rec={el,o,minor:minor===true, farOnly:minor==='far'}; labels.push(rec); return rec;
+}
+function untag(rec){ const i=labels.indexOf(rec); if(i>=0) labels.splice(i,1); rec.el.remove(); if(rec.o.parent) rec.o.parent.remove(rec.o); }
+
+// ---------- SSL frame + member register (every member is inspectable)
+// Naming per the previous contractor's report (Section 5.2 + Gridline X elevation):
+//   Modules NE / NW / SE / SW · grid rows Z, Y, X, W from the ships berth (west) to shore · columns 1–4 from north to south
+//   Legs = grid intersections (e.g. X3), split into Sections 1–7 at the bolted splices · braces numbered per gridline from 5
+const UP = V(0,1,0), DOWN = V(0,-1,0), FACE = V(0,0,1);
+const MEM = {}, MKEYS = [], GROUPS = [];
+function addMem(key, d){ MEM[key] = d; MKEYS.push(key); if(!GROUPS.includes(d.group)) GROUPS.push(d.group); }
+function sideFor(mid, a){
+  let out = V(mid.x, 0, mid.z); if(out.lengthSq()<1e-6) out = V(0,0,1); out.normalize();
+  let s = out.clone().sub(a.clone().multiplyScalar(out.dot(a)));
+  if(s.lengthSq()<1e-4) s = new THREE.Vector3().crossVectors(a, UP);
+  if(s.lengthSq()<1e-4) s = V(1,0,0);
+  return s.normalize().multiplyScalar(0.24);
+}
+const ROWS = ['Z','Y','X','W'], COLS = [1,2,3,4];
+const colX = c => [-HALF, -HALF+TW, HALF-TW, HALF][c-1];          // column 1 = north (−x)
+const rowZ = r => ({Z:HALF, Y:HALF-TW, X:-HALF+TW, W:-HALF})[r];   // row Z = ships berth (west, +z)
+const MODS = { NW:{rows:['Z','Y'], cols:[1,2]}, SW:{rows:['Z','Y'], cols:[3,4]}, NE:{rows:['X','W'], cols:[1,2]}, SE:{rows:['X','W'], cols:[3,4]} };
+const MODNAME = {NW:'north-west', SW:'south-west', SE:'south-east', NE:'north-east'};
+const legXZ = id => [colX(+id.slice(1)), rowZ(id[0])];
+const legP = (id, y) => V(colX(+id.slice(1)), y, rowZ(id[0]));
+const modOf = id => Object.keys(MODS).find(m=>MODS[m].rows.includes(id[0]) && MODS[m].cols.includes(+id.slice(1)));
+const modCentre = m => [(colX(MODS[m].cols[0])+colX(MODS[m].cols[1]))/2, (rowZ(MODS[m].rows[0])+rowZ(MODS[m].rows[1]))/2];
+const HUBR = 0.36;   // octagonal hub plate radius (illustrative)
+const SECNAME = y => 1 + SPL.filter(sp=>y > sp + 1e-6).length;
+
+// legs: one member per leg per section (bolted splice to bolted splice)
+const SEG = {}; for(let n=1;n<=NSEC;n++) SEG[n] = [n===1 ? SEABED : SPL[n-2], n===NSEC ? LEGTOP : SPL[n-1]];
+Object.keys(MODS).forEach(m=>{
+  const G1 = `${m} Module — legs`;
+  MODS[m].rows.forEach(r=>MODS[m].cols.forEach(c=>{
+    const id = r + c, [x,z] = legXZ(id);
+    [7,6,5,4,3,2,1].forEach(sn=>{ const [y0,y1] = SEG[sn];
+      addMem(`${id}-S${sn}`, {name:`Leg ${id} (${m} Module) — Section ${sn}`, group:G1, type:'Pile', orient:'Vertical', o:V(x,0,z), a:UP, f:DOWN, u:FACE, r:RP,
+        side:sideFor(V(x,0,z),UP), kind:'elev', toS:p=>p, labelIdx:3, datum:'Elevation datum transferred to the leg (m rel. LAT).',
+        p0:V(x,y0,z), p1:V(x,y1,z), section:sn, inner:['Y','X'].includes(r) && [2,3].includes(c)});
+    });
+  }));
+});
+
+// gridline elevations. Rows are viewed looking west (left → right: 4, 3, 2, 1, as the previous report);
+// columns are viewed looking north (left → right: Z, Y, X, W) [TBC]. Centre bays (hub) on the inner gridlines Y, X, 2, 3.
+const GRIDS = {};
+ROWS.forEach(r=>{ GRIDS[r] = {legs:[4,3,2,1].map(c=>r+c), look:'looking west', inner:['Y','X'].includes(r), nrm:V(0,0,r==='Z'||r==='Y'?1:-1)}; });
+COLS.forEach(c=>{ GRIDS[c] = {legs:['Z','Y','X','W'].map(r=>r+c), look:'looking north [TBC]', inner:[2,3].includes(c), nrm:V(c<=2?-1:1,0,0)}; });
+const HUBS = [];
+function gridMembers(g){
+  const {legs, inner} = GRIDS[g], out = [];
+  const P = (id,y)=>legP(id,y);
+  const H = (a,b,y,what,sn)=>out.push({kind:'H', p:P(a,y), q:P(b,y), so:RP, eo:RP, what, sn, datum:`Datum: weld toe at leg ${a}; + axial toward leg ${b}.`});
+  const D = (lo,ylo,hi,yhi,what,sn)=>out.push({kind:'D', p:P(lo,ylo), q:P(hi,yhi), so:0.25, eo:0.25, what, sn, datum:`Datum: lower end at leg ${lo}; + axial upward to leg ${hi}.`});
+  // two module faces: [outer, inner] legs; horizontals run left → right as viewed. Engineer's model: a horizontal at every level and an X-brace in every section.
+  [[legs[0],legs[1],legs[0],legs[1]],[legs[3],legs[2],legs[2],legs[3]]].forEach(([o,i,l,rr])=>{
+    const mod = modOf(o);
+    for(let n=0;n<=NSEC;n++) H(l,rr,LV[n],`${mod} Module, horizontal at L${n}` + (n===0 ? ' (bottom of Section 1)' : n===NSEC ? ' (top)' : ` (top of Section ${n}, below the splice)`), Math.max(1,n));
+    for(let n=1;n<=NSEC;n++){
+      D(l,LV[n-1],rr,LV[n],`${mod} Module, Section ${n} X-brace rising from leg ${l} to ${rr}`,n);
+      D(rr,LV[n-1],l,LV[n],`${mod} Module, Section ${n} X-brace rising from leg ${rr} to ${l}`,n);
+    }
+  });
+  if(inner){
+    const a = legs[1], b = legs[2], mid = y => P(a,y).add(P(b,y)).multiplyScalar(0.5);
+    // upper inter-tower bracing (engineer's model + site photos): top horizontal at L7, horizontal through the hub at L6, hub diagonals to L7 and L5; no bottom horizontal
+    const hub = mid(LV[6]); HUBS.push({H:hub, nrm:GRIDS[g].nrm});
+    H(a,b,LV[7],'Centre bay top horizontal (L7)',7);
+    H(a,b,LV[6],'Centre bay horizontal through the hub (L6)',7);
+    [[a,LV[7],'upper left'],[b,LV[7],'upper right'],[a,LV[5],'lower left'],[b,LV[5],'lower right']].forEach(([leg,y,sd])=>
+      out.push({kind:'D', p:hub.clone(), q:P(leg,y), so:HUBR, eo:0.3, what:`Centre bay hub diagonal ${sd}`, sn: y > LV[6] ? 7 : 6, datum:`Datum: hub plate edge; + axial outward to leg ${leg}.`}));
+    // lower inter-tower bracing below LAT (engineer's model): horizontals at L3 and L1, diamond diagonals from the mid-span nodes to the legs at L2, mid-span vertical
+    H(a,b,LV[3],'Inter-tower horizontal at L3 (below LAT)',3);
+    H(a,b,LV[1],'Inter-tower horizontal at L1 (below LAT)',1);
+    const top = mid(LV[3]), bot = mid(LV[1]);
+    [[a,'left'],[b,'right']].forEach(([leg,sd])=>{
+      out.push({kind:'D', p:P(leg,LV[2]), q:top.clone(), so:0.25, eo:RH+0.06, what:`Inter-tower diagonal, upper ${sd} (leg ${leg} at L2 to mid-span at L3)`, sn:3, datum:`Datum: lower end at leg ${leg}; + axial upward to the mid-span node.`});
+      out.push({kind:'D', p:bot.clone(), q:P(leg,LV[2]), so:RH+0.06, eo:0.25, what:`Inter-tower diagonal, lower ${sd} (mid-span at L1 to leg ${leg} at L2)`, sn:2, datum:`Datum: lower end at the mid-span node; + axial upward to leg ${leg}.`});
+    });
+    out.push({kind:'V', p:bot.clone(), q:top.clone(), so:RH+0.06, eo:RH+0.06, what:'Inter-tower mid-span vertical (L1 to L3)', sn:2, datum:'Datum: weld toe at the L1 horizontal; + axial upward.'});
+  }
+  // number from 5 as the previous report: the hub-level band (L6 down to L4, the report's Gridline X drawing) first, then above, then below;
+  // within each, top level down, horizontals before diagonals, then left to right as viewed
+  const L0 = legP(legs[0],0), L3 = legP(legs[3],0), dir = L3.clone().sub(L0).normalize();
+  const h = v => v.clone().sub(L0).dot(dir);
+  const e = 1e-3;
+  out.forEach(m=>{
+    m.top = Math.max(m.p.y, m.q.y); m.bot = Math.min(m.p.y, m.q.y); m.left = Math.min(h(m.p), h(m.q));
+    m.band = (m.bot >= LV[4] - e && m.top <= LV[6] + e && !(m.kind==='H' && Math.abs(m.top-LV[4])<e)) ? 0 : m.top > LV[6] + e ? 1 : 2;
+  });
+  out.sort((x,y)=> x.band-y.band || y.top-x.top || (x.kind===y.kind ? 0 : x.kind==='H' ? -1 : 1) || x.left-y.left);
+  out.forEach((m,i)=>m.n = i+5);
+  return out;
+}
+const GORDER = ['Z','Y','X','W',1,2,3,4];
+GORDER.forEach(g=>{
+  const G2 = `Gridline ${g} (${GRIDS[g].look})`;
+  gridMembers(g).forEach(m=>{
+    const a = m.q.clone().sub(m.p).normalize(), L = m.q.clone().sub(m.p).length(), mid = m.p.clone().add(m.q).multiplyScalar(0.5);
+    addMem(`${g}-${m.n}`, {name:`Gridline ${g} · ${m.n} — ${m.what}`, group:G2, type: m.kind==='H' ? 'Brace — horizontal' : m.kind==='V' ? 'Brace — vertical' : 'Brace — diagonal',
+      orient: m.kind==='H' ? 'Horizontal' : m.kind==='V' ? 'Vertical' : 'Diagonal', o:m.p.clone(), a, f:a, u:topOf(a), r:RH, side:sideFor(mid,a), kind:'axial',
+      toS:(pp=>m.so+pp/1000), len:Math.round((L-m.so-m.eo)*1000), labelIdx:1, datum:m.datum, p0:m.p.clone(), p1:m.q.clone(), section:m.sn, grid:g, num:m.n, inner:GRIDS[g].inner});
+  });
+});
+
+// ---------- draw the frame
+MKEYS.forEach(k=>{ const M = MEM[k]; G.context.add(cyl(M.p0, M.p1, M.r, paintMat, false, 20)); });
+// bolted splice flanges, leg base plates, hub plates
+const flangeGeo = new THREE.BoxGeometry(0.56, 0.05, 0.56), gussetGeo = new THREE.BoxGeometry(0.02, 0.16, 0.13);
+ROWS.forEach(r=>COLS.forEach(c=>{ const id = r+c;
+  SPL.forEach(y=>{ [0.04,-0.04].forEach(dy=>{ const f = new THREE.Mesh(flangeGeo, plateMat); f.position.copy(legP(id,y+dy)); G.context.add(f); });
+    for(let q=0;q<4;q++){ [1,-1].forEach(sg=>{ const g = new THREE.Mesh(gussetGeo, plateMat); const ang = q*Math.PI/2, rr = RP+0.065;
+      g.position.copy(legP(id,y+sg*0.12)).add(V(Math.cos(ang)*rr,0,Math.sin(ang)*rr)); g.rotation.y = -ang; G.context.add(g); }); } });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.12,0.7), plateMat); b.position.copy(legP(id,SEABED+0.06)); G.context.add(b);
+}));
+HUBS.forEach(({H,nrm})=>{ const p = new THREE.Mesh(new THREE.CylinderGeometry(HUBR,HUBR,0.04,8), plateMat);
+  p.position.copy(H); p.quaternion.setFromUnitVectors(UP, nrm); G.context.add(p); });
+(function(){ const d = new THREE.Mesh(new THREE.BoxGeometry(2*HALF+0.8, 1.2, 2*HALF+0.8), deckMat); d.position.set(0, LEGTOP+0.6, 0); G.deck.add(d); })();
+tag('Ship loader deck and circular girder (not modelled)', V(0, LEGTOP+1.35, 0), G.deck, '#b0975e', 'dim');
+Object.keys(MODS).forEach(m=>{ const [cx,cz] = modCentre(m); tag(`${m} MODULE`, V(cx, LEGTOP+0.35, cz), G.orient, '#7a6a48', 'big', 'far'); });
+// grid bubbles at leg tops
+ROWS.forEach(r=>COLS.forEach(c=>tag(r+c, legP(r+c, LEGTOP+0.15), G.orient, '#002060', 'dim', true)));
+ROWS.forEach(r=>tag(r, V(HALF+1.3, LEGTOP, rowZ(r)), G.orient, '#002060', 'big', 'far'));
+COLS.forEach(c=>tag(String(c), V(colX(c), LEGTOP, HALF+1.3), G.orient, '#002060', 'big', 'far'));
+tag('SHIPS BERTH', V(0, 0, HALF+2.4), G.orient, '#2f6fb5', 'big', 'far');
+tag('SHORE', V(0, 0, -HALF-2.4), G.orient, '#2f6fb5', 'big', 'far');
+const bed = new THREE.Mesh(new THREE.PlaneGeometry(2*HALF+6, 2*HALF+6), new THREE.MeshStandardMaterial({color:0xb9a98a, roughness:1, transparent:true, opacity:.35, side:THREE.DoubleSide}));
+bed.rotation.x = -Math.PI/2; bed.position.set(0,SEABED,0); G.deck.add(bed);
+
+// ---------- zones and datums
+function waterPlane(y,color,op){
+  const S = HALF+2.2;
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(2*S,2*S), new THREE.MeshBasicMaterial({color,transparent:true,opacity:op,side:THREE.DoubleSide,depthWrite:false}));
+  p.rotation.x = -Math.PI/2; p.position.set(0,y,0); G.tide.add(p);
+  line([V(-S,y,-S),V(S,y,-S),V(S,y,S),V(-S,y,S),V(-S,y,-S)],color,G.tide);
+}
+waterPlane(0,0x2f6fb5,.14);
+waterPlane(HAT,0x1aa3a3,.08);
+tag('LAT 0.00 m', V(-HALF-2.2,0,HALF+2.2), G.tide, '#2f6fb5', 'l');
+tag('HAT +1.40 m [TBC]', V(-HALF-2.2,HAT,HALF+2.2), G.tide, '#1aa3a3', 'l');
+const ZX = -HALF-2.6, ZZ = HALF+1.0;
+[[PY0,0,0x2f6fb5,'SUBSEA'],[0,HAT,0x1aa3a3,'SPLASH / TIDAL'],[HAT,PY1,0x8a94a6,'ATMOSPHERIC']].forEach(([a,b,c,t])=>{
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.09,b-a,0.09), new THREE.MeshBasicMaterial({color:c}));
+  m.position.set(ZX,(a+b)/2,ZZ); G.zbar.add(m);
+  tag(t, V(ZX-0.08,(a+b)/2,ZZ), G.zbar, '#'+c.toString(16).padStart(6,'0'), 'l big');
+});
+const SB = -2.0, ST = HAT+2.0, SX = -HALF-1.6, SZ = HALF+1.0;
+line([V(SX+0.12,SB,SZ),V(SX,SB,SZ),V(SX,ST,SZ),V(SX+0.12,ST,SZ)], 0x002060, G.zbar);
+tag('SOW 4.2: LAT − 2 m', V(SX-0.05,SB,SZ), G.zbar, '#002060', 'l');
+tag('SOW 4.2: HAT + 2 m', V(SX-0.05,ST,SZ), G.zbar, '#002060', 'l');
+LV.map((y,n)=>[n===NSEC ? 'L7 top horizontal' : n===0 ? 'L0 bottom horizontal' : `L${n} · top of Section ${n} (flange +0.27)`, y])
+  .forEach(([t,y])=>tag(`${t}  ${y>=0?'+':'−'}${Math.abs(y).toFixed(2)} m [TBC]`, V(HALF+0.5, y, HALF+0.3), G.lvl, '#7a6a48', 'r dim'));
+// compass: west face toward the viewer (+z), north to the left (−x)
+[['N',V(-HALF-2.6,0,0)],['S',V(HALF+2.6,0,0)],['W',V(0,0,HALF+2.6)],['E',V(0,0,-HALF-2.6)]].forEach(([t,p])=>tag(t, p, G.orient, '#002060', 'big'));
+arrow(V(-HALF-1.2,0.02,0), V(-1,0,0), 1.0, 0x002060, G.orient, 0.25);
+
+// ---------- INITIAL INSPECTION: full-length CVI + UT rings every 500 mm, 4 points (12 / 3 / 6 / 9) — data entry (instanced)
+const IC = 0x0b5cad, ICs = '#0b5cad';
+const PT_COL = {none:0x0b5cad, ok:0x2e9e4f, low:0xd62828, high:0xe9a23b};
+const KS = [0,3,6,9];
+const KNAME = k => k===0 ? '12' : String(k);
+const cviAct = new THREE.MeshBasicMaterial({color:0x2f8cff, transparent:true, opacity:.28, side:THREE.DoubleSide, depthWrite:false});
+
+const DEFAULTS = { active:'X3-S3', common:{date:'', operator:'', cert:'', equip:'', hat:1.4} };
+MKEYS.forEach(k=>{ const M = MEM[k];
+  DEFAULTS[k] = M.kind==='elev' ? {id:'', structure:'SSL', od:'', wt:'', ffs:'', bottom:+M.p0.y.toFixed(2), top:+M.p1.y.toFixed(2), readings:{}, remarks:{}}
+                                : {id:'', structure:'SSL', od:'', wt:'', ffs:'', length:M.len, readings:{}, remarks:{}};
+});
+const STORE_KEY = 'ssl-itp002-ut-v3', BACKUP_FMT = 'ssl-itp002-ut';
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function loadState(){
+  let st = clone(DEFAULTS);
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) st = mergeState(JSON.parse(raw)); }catch(e){}
+  return st;
+}
+function oldId(k){   // T1–T4 / F R B L ids (first SSL issue) → compass ids
+  const TMAP = {T1:'NW',T2:'SW',T3:'SE',T4:'NE'}, FMAP = {F:'W',R:'S',B:'E',L:'N'};
+  let m;
+  if((m = k.match(/^(T[1-4])-H(\d)([FRBL])$/))) return `${TMAP[m[1]]}-H${m[2]}${FMAP[m[3]]}`;
+  if((m = k.match(/^(T[1-4])-D(\d)([FRBL])([RL])$/))) return `${TMAP[m[1]]}-D${m[2]}${FMAP[m[3]]}${m[4]}`;
+  if((m = k.match(/^(T[1-4])-(.+)$/))) return `${TMAP[m[1]]}-${m[2]}`;
+  if((m = k.match(/^C([FRBL])-(.+)$/))) return `C${FMAP[m[1]]}-${m[2]}`;
+  return k;
+}
+function migrateIds(d){
+  if(!d || typeof d!=='object') return d;
+  const out = {};
+  Object.keys(d).forEach(k=>{ out[MEM[k] ? k : (MEM[oldId(k)] ? oldId(k) : k)] = d[k]; });
+  if(d.active && !MEM[d.active]) out.active = oldId(d.active);
+  return out;
+}
+function mergeState(d){
+  d = migrateIds(d);
+  const st = clone(DEFAULTS);
+  if(d && typeof d==='object'){
+    if(MKEYS.includes(d.active)) st.active = d.active;
+    Object.assign(st.common, d.common||{});
+    MKEYS.forEach(k=>{ if(d[k]) { Object.assign(st[k], d[k]); st[k].readings = d[k].readings||{}; st[k].remarks = d[k].remarks||{}; } });
+  }
+  return st;
+}
+let UTS = loadState();
+let saveTimer = null;
+function saveState(){ clearTimeout(saveTimer); saveTimer = setTimeout(()=>{ try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} }, 250); }
+const num = v => (v===''||v===null||v===undefined||isNaN(+v)) ? null : +v;
+
+// vertical rings: end ring at each end, 500 mm grid on LAT between (a grid ring within 150 mm of an end is dropped)
+function pileElevs(b, t){
+  const out = []; if(b===null||t===null||t<=b) return out;
+  out.push(+b.toFixed(2));
+  for(let p = Math.floor(b/0.5)*0.5 + 0.5; p < t - 0.15 + 1e-9; p += 0.5){ if(p - out[out.length-1] > 0.15 - 1e-9) out.push(+p.toFixed(2)); }
+  if(t - out[out.length-1] > 1e-6) out.push(+t.toFixed(2));
+  return out;
+}
+function ringsFor(mk){
+  const m = UTS[mk], out = [];
+  if(MEM[mk].kind==='elev'){
+    return pileElevs(num(m.bottom), num(m.top)).slice(0,40).map(p=>({key:p.toFixed(2), pos:p, label:`${p>=0?'+':'−'}${Math.abs(p).toFixed(2)} m`, s:p}));
+  }
+  const L = num(m.length); if(L===null||L<=0) return out;
+  for(let p=0; p<=L+1e-6; p+=500) out.push(Math.round(p));
+  if(L - out[out.length-1] > 150) out.push(Math.round(L));
+  return out.slice(0,40).map(p=>({key:String(p), pos:p, label:`${p} mm`, s:MEM[mk].toS(p)}));
+}
+function ringCount(mk){
+  const m = UTS[mk];
+  if(MEM[mk].kind==='elev') return pileElevs(num(m.bottom), num(m.top)).length;
+  const L=num(m.length); return (L===null||L<=0)?0:Math.floor(L/500+1e-6)+1+((L%500)>150?1:0);
+}
+function readingClass(mk, v){
+  const x = num(v); if(x===null) return 'none';
+  const ffs = num(UTS[mk].ffs), wt = num(UTS[mk].wt);
+  if(ffs!==null && x < ffs) return 'low';
+  if(wt!==null && x > wt*1.1) return 'high';
+  return 'ok';
+}
+function pointPos(mk, s, k){ const M = MEM[mk]; return clockPos(M.o.clone().addScaledVector(M.a,s), M.f, M.u, M.r+0.009, k); }
+
+// instanced points / pick targets / ring lines for all members
+let PTS = null, PICKI = null, RINGI = null, INST = [], IDX = {};
+const ptGeo = new THREE.SphereGeometry(0.02,8,6), pickGeo = new THREE.SphereGeometry(0.07,6,4);
+const ptMat = new THREE.MeshBasicMaterial({color:0xffffff});
+const pickMat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false});
+const ringMat = new THREE.MeshBasicMaterial({color:0x1d1f24});
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1,1,1), _c = new THREE.Color();
+function rebuildAll(){
+  [PTS,PICKI,RINGI].forEach(o=>{ if(o){ G.rings.remove(o); o.dispose && o.dispose(); } });
+  INST = []; IDX = {};
+  const ringsList = [];
+  MKEYS.forEach(mk=>{ ringsFor(mk).forEach(R=>{ ringsList.push([mk,R]); KS.forEach(k=>{ IDX[jk(mk,R.key,k)] = INST.length; INST.push({mk, key:R.key, k, s:R.s}); }); }); });
+  PTS = new THREE.InstancedMesh(ptGeo, ptMat, INST.length);
+  PICKI = new THREE.InstancedMesh(pickGeo, pickMat, INST.length);
+  INST.forEach((p,i)=>{ _m.compose(pointPos(p.mk,p.s,p.k), _q.identity(), _s); PTS.setMatrixAt(i,_m); PICKI.setMatrixAt(i,_m); });
+  // ring lines — torus geometries differ by radius: group by radius
+  RINGI = new THREE.Group();
+  const byR = {};
+  ringsList.forEach(([mk,R])=>{ const r = MEM[mk].r; (byR[r] = byR[r]||[]).push([mk,R]); });
+  Object.entries(byR).forEach(([r,list])=>{
+    const im = new THREE.InstancedMesh(new THREE.TorusGeometry(+r+0.003,0.006,4,24), ringMat, list.length);
+    list.forEach(([mk,R],i)=>{ const M = MEM[mk]; _q.setFromUnitVectors(V(0,0,1), M.a); _m.compose(M.o.clone().addScaledVector(M.a,R.s), _q, _s); im.setMatrixAt(i,_m); });
+    RINGI.add(im);
+  });
+  PICKI.visible = false;   // pick targets are ray-tested but never drawn
+  G.rings.add(PTS); G.rings.add(PICKI); G.rings.add(RINGI);
+  MKEYS.forEach(recolour);
+}
+function recolour(mk){
+  if(!PTS) return;
+  ringsFor(mk).forEach(R=>KS.forEach(k=>{
+    const i = IDX[jk(mk,R.key,k)]; if(i===undefined) return;
+    const v = (UTS[mk].readings[R.key]||{})[k];
+    PTS.setColorAt(i, _c.setHex(PT_COL[readingClass(mk,v)]));
+  }));
+  if(PTS.instanceColor) PTS.instanceColor.needsUpdate = true;
+}
+// active member: CVI band, ring labels, clock labels, highlight of the selected point
+const ACT = new THREE.Group(); G.rings.add(ACT);
+let actLabels = [];
+const selMark = new THREE.Mesh(new THREE.SphereGeometry(0.045,16,12), new THREE.MeshBasicMaterial({color:0xffd400, transparent:true, opacity:.9}));
+selMark.visible = false; G.rings.add(selMark);
+let selected = null;   // {mk,key,k}
+function buildActive(){
+  actLabels.forEach(untag); actLabels = [];
+  while(ACT.children.length) ACT.remove(ACT.children[0]);
+  const mk = UTS.active, M = MEM[mk], list = ringsFor(mk); if(!list.length) return;
+  const T = (...args)=>{ const r = tag(...args); actLabels.push(r); return r; };
+  const s0 = list[0].s, s1 = list[list.length-1].s;
+  ACT.add(cyl(M.o.clone().addScaledVector(M.a,s0), M.o.clone().addScaledVector(M.a,s1), M.r+0.014, cviAct, true, 24));
+  const li = Math.min(M.labelIdx, list.length-1);
+  list.forEach((R,i)=>{ if(i!==li) T(`R${String(i+1).padStart(2,'0')}  ${R.label}`, M.o.clone().addScaledVector(M.a,R.s).add(M.side), ACT, ICs, 'dim'); });
+  const R = list[li], c = M.o.clone().addScaledVector(M.a,R.s);
+  KS.forEach(k=>T(k===0 ? `12  ·  R${String(li+1).padStart(2,'0')}  ${R.label}` : String(k), clockPos(c,M.f,M.u,M.r+0.11,k), ACT, k===0?'#d62828':ICs, 'dim', true));
+  T(M.name.toUpperCase(), M.kind==='elev' ? M.o.clone().addScaledVector(M.a,s1+0.4) : M.o.clone().addScaledVector(M.a,(s0+s1)/2).add(M.side.clone().multiplyScalar(2.4)), ACT, ICs, 'big', 'far');
+}
+function buildMember(){ rebuildAll(); buildActive(); }
+rebuildAll(); buildActive();
+
+// ---------- views
+const ALL=['rings','context','defx'];
+const VIEWS = {
+  defects:{pos:[24,5,36], tgt:[0,-1.2,0], on:['defx','context']},
+  initial:{pos:[24,5,36], tgt:[0,-1.2,0], on:['rings','defx','context']},
+};
+let tween=null;
+function go(name){
+  const v = VIEWS[name] || VIEWS.initial;
+  ALL.forEach(k=>{const on=(v.on||ALL).includes(k); G[k].visible=on; const cb=document.getElementById('L-'+k); if(cb) cb.checked=on;});
+  document.querySelectorAll('.presets button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view===name?'true':'false'));
+  const p1 = V(...v.pos), t1 = V(...v.tgt);
+  if(reduceMotion){camera.position.copy(p1); controls.target.copy(t1); controls.update(); return;}
+  tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:700};
+}
+document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',()=>{
+  if(location.hash==='#'+b.dataset.view) go(b.dataset.view); else location.hash=b.dataset.view;
+}));
+window.addEventListener('hashchange',()=>go(location.hash.slice(1)));
+ALL.forEach(k=>{
+  const cb=document.getElementById('L-'+k); cb.addEventListener('change',()=>{G[k].visible=cb.checked;});
+});
+
+// ---------- UT data entry UI
+const $ = id => document.getElementById(id);
+// ---------- safe DOM builders (no HTML strings)
+function h(tag, props, ...kids){
+  const el = document.createElement(tag);
+  if(props) Object.keys(props).forEach(k=>{ const v = props[k]; if(v===null || v===undefined || v===false) return;
+    if(k==='class') el.className = v;
+    else if(k==='value') el.value = String(v);
+    else if(k==='selected') el.selected = !!v;
+    else el.setAttribute(k, v===true ? '' : String(v)); });
+  kids.flat(Infinity).forEach(c=>{ if(c===null || c===undefined || c===false || c==='') return; el.append(c instanceof Node ? c : String(c)); });
+  return el;
+}
+function jk(...parts){ return parts.join('|'); }          // composite map key
+function nth(arr, i){ return (i>=0 && i<arr.length) ? arr.at(i) : undefined; }
+
+const pop = $('pop'), popVal = $('pop-val'), popRem = $('pop-rem'), popHead = $('pop-head');
+const toastEl = $('toast');
+let toastT = null;
+function toast(msg, bad){ toastEl.textContent = msg; toastEl.dataset.bad = bad ? '1' : ''; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>toastEl.hidden=true, 4200); }
+
+// tabs
+function showTab(t){
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected', b.dataset.tab===t?'true':'false'));
+  $('tab-entry').hidden = t!=='entry'; $('tab-ref').hidden = t!=='ref'; $('tab-how').hidden = t!=='how'; $('tab-access').hidden = t!=='access';
+  try{ localStorage.setItem(STORE_KEY+'-tab', t); }catch(e){}
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+let tab0 = 'entry'; try{ tab0 = localStorage.getItem(STORE_KEY+'-tab') || 'entry'; if(!['entry','ref','how'].includes(tab0)) tab0='entry'; }catch(e){}
+showTab(tab0);
+
+// member switcher
+function memberProgress(mk){
+  const list = ringsFor(mk), rd = UTS[mk].readings; let n = 0;
+  list.forEach(R=>KS.forEach(k=>{ if(num((rd[R.key]||{})[k])!==null) n++; }));
+  return [n, list.length*4];
+}
+function renderMemberSelect(){
+  const sel = $('mem-sel');
+  sel.replaceChildren(...GROUPS.map(g=>h('optgroup', {label:g}, MKEYS.filter(k=>MEM[k].group===g).map(k=>{ const [n,t] = memberProgress(k); const id = UTS[k].id;
+    return h('option', {value:k, selected:k===UTS.active}, `${MEM[k].name}${id?' · '+id:''}  (${n}/${t})`); }))));
+}
+function flyToMember(mk){
+  const M = MEM[mk], list = ringsFor(mk); if(!list.length) return;
+  const s0 = list[0].s, s1 = list[list.length-1].s, L = Math.abs(s1-s0);
+  const t1 = M.o.clone().addScaledVector(M.a,(s0+s1)/2);
+  let out = V(t1.x, 0, t1.z); if(out.lengthSq()<1e-6) out = V(0,0,1); out.normalize();   // view from outside the structure
+  if(M.inner) out.negate();   // inner gridlines and legs: view from the open centre
+  const side = new THREE.Vector3().crossVectors(UP, out).multiplyScalar(0.25);
+  const p1 = t1.clone().addScaledVector(out, Math.max(2.6, L*1.15)).add(side).add(V(0, 0.6, 0));
+  G.rings.visible = true; $('L-rings').checked = true;
+  if(reduceMotion){ camera.position.copy(p1); controls.target.copy(t1); controls.update(); return; }
+  tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:700};
+}
+function setActive(mk, moveCamera){
+  const prev = UTS.active; UTS.active = mk; saveState();
+  buildActive();
+  renderMemberSelect(); renderForm(); renderTable(); renderSummary();
+  if(moveCamera) flyToMember(mk);
+}
+$('mem-sel').addEventListener('change', e=>setActive(e.target.value, true));
+$('mem-prev').addEventListener('click', ()=>{ const i = MKEYS.indexOf(UTS.active); setActive(nth(MKEYS, (i-1+MKEYS.length)%MKEYS.length), true); });
+$('mem-next').addEventListener('click', ()=>{ const i = MKEYS.indexOf(UTS.active); setActive(nth(MKEYS, (i+1)%MKEYS.length), true); });
+
+// member + inspection fields
+const FIELDS = [
+  ['id','Member ID','text'], ['structure','Structure','select:SSL,NSL'],
+  ['od','Nominal OD (mm)','num'], ['wt','Nominal WT (mm)','num'], ['ffs','Fit-for-service limit (mm)','num'],
+];
+const EXTENT = { elev:[['bottom','Inspect from — bottom (m LAT)','num'],['top','Inspect to — top (m LAT)','num']], axial:[['length','Length between datum and end (mm)','num']] };
+const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['equip','Equipment ID','text'],['hat','HAT (m rel. LAT)','num']];
+function fieldEl(scope, [k,label,type]){
+  const id = `f-${scope}-${k}`, v = scope==='common' ? UTS.common[k] : UTS[UTS.active][k];
+  if(type.startsWith('select:')) return h('label', {for:id}, label, h('select', {id, 'data-scope':scope, 'data-k':k}, type.slice(7).split(',').map(o=>h('option', {selected:o===v}, o))));
+  return h('label', {for:id}, label, h('input', {id, type: type==='num' ? 'text' : type, inputmode: type==='num' ? 'decimal' : null, 'data-scope':scope, 'data-k':k,
+    value: v===null||v===undefined ? '' : v, autocomplete:'off', placeholder: (k==='od'||k==='wt') ? 'TBC — measure' : null}));
+}
+function renderForm(){
+  const mk = UTS.active, M = MEM[mk];
+  $('form-member').replaceChildren(...FIELDS.map(f=>fieldEl('member',f)), ...EXTENT[M.kind].map(f=>fieldEl('member',f)));
+  $('form-common').replaceChildren(...COMMON.map(f=>fieldEl('common',f)));
+  $('ext-note').textContent = M.kind==='elev'
+    ? `Section ${M.section} of the leg, splice to splice: rings on a 500 mm grid referenced to LAT, plus a ring at each end. Modelled ${M.p0.y.toFixed(2)} to ${M.p1.y>=0?'+':''}${M.p1.y.toFixed(2)} m (levels are illustrative) — enter the actual splice / seabed / leg top elevations. Member size not on M61 — enter OD and WT. ` + M.datum
+    : `Rings every 500 mm from the datum to the end. ${M.datum} Length ${M.len} mm modelled from the previous contractor's model and the M61 plan — enter the measured length and the member size.`;
+}
+function onField(e){
+  const el = e.target, k = el.dataset.k; if(!k) return;
+  const scope = el.dataset.scope, tgt = scope==='common' ? UTS.common : UTS[UTS.active];
+  const nv = el.value.trim(); if(String(tgt[k]??'')===nv) return;
+  tgt[k] = nv;
+  saveState();
+  if(['bottom','top','length'].includes(k)){ buildMember(UTS.active); renderTable(); renderMemberSelect(); }
+  if(['ffs','wt'].includes(k)){ recolour(UTS.active); restyleTable(); }
+  if(k==='hat'){ /* zone only used in ITP */ }
+  if(k==='id') renderSummary();
+  renderSummary();
+}
+$('form-member').addEventListener('change', onField);
+$('form-common').addEventListener('change', onField);
+
+// readings table
+function renderTable(){
+  const mk = UTS.active, list = ringsFor(mk), rd = UTS[mk].readings;
+  const over = ringCount(mk) > 40;
+  $('ring-warn').hidden = !over;
+  $('pos-head').textContent = MEM[mk].kind==='elev' ? 'Elev.' : 'Pos.';
+  const rows = list.map((R,i)=>{
+    const r = rd[R.key]||{};
+    const vals = KS.map(k=>num(r[k])).filter(x=>x!==null);
+    const mn = vals.length ? Math.min(...vals) : null;
+    const rem = (UTS[mk].remarks||{})[R.key] || '', rid = `R${String(i+1).padStart(2,'0')}`;
+    return h('tr', {'data-key':R.key},
+      h('th', {scope:'row', title:rem||null}, rid, rem ? h('span', {class:'rem-dot', 'aria-label':'has remark'}, '•') : null),
+      h('td', {class:'pos'}, R.label.replace(' mm','').replace(' m','')),
+      KS.map(k=>h('td', null, h('input', {class:'rd', 'data-key':R.key, 'data-k':k, inputmode:'decimal', autocomplete:'off', 'aria-label':`${rid} ${KNAME(k)} o'clock`, value:r[k]??'', 'data-c':readingClass(mk,r[k])}))),
+      h('td', {class:'mn', 'data-c':readingClass(mk,mn)}, mn===null ? '' : mn.toFixed(1)));
+  });
+  $('ut-body').replaceChildren(...(rows.length ? rows : [h('tr', null, h('td', {colspan:7, class:'empty'}, 'Enter the survey extent above to generate the rings.'))]));
+}
+function restyleTable(){   // re-evaluate cell colours without rebuilding (keeps focus)
+  document.querySelectorAll('#ut-body tr[data-key]').forEach(tr=>updateRow(tr.dataset.key));
+}
+function setReading(mk,key,k,raw){
+  const v = String(raw).trim().replace(',', '.');
+  if(v!=='' && (isNaN(+v) || +v<0 || +v>200)){ toast(`"${raw}" is not a thickness in mm.`, true); return false; }
+  const rd = UTS[mk].readings; rd[key] = rd[key]||{};
+  if(v==='') delete rd[key][k]; else rd[key][k] = +v;
+  saveState(); recolour(mk); return true;
+}
+$('ut-body').addEventListener('change', e=>{
+  const el = e.target; if(!el.classList.contains('rd')) return;
+  if(!setReading(UTS.active, el.dataset.key, el.dataset.k, el.value)){ el.value=''; }
+  updateRow(el.dataset.key); renderSummary();
+});
+$('ut-body').addEventListener('focusin', e=>{
+  const el = e.target; if(!el.classList.contains('rd')) return;
+  select({mk:UTS.active, key:el.dataset.key, k:+el.dataset.k}, false);
+});
+$('ut-body').addEventListener('keydown', e=>{
+  if(e.key!=='Enter') return; e.preventDefault();
+  const ins = [...document.querySelectorAll('#ut-body input.rd')]; const i = ins.indexOf(e.target);
+  e.target.dispatchEvent(new Event('change',{bubbles:true}));
+  const nx = nth(ins, i + (e.shiftKey?-1:1)); if(nx){ nx.focus(); nx.select(); }
+});
+function updateRow(key){
+  const mk = UTS.active, tr = document.querySelector(`#ut-body tr[data-key="${CSS.escape(key)}"]`); if(!tr) return;
+  const r = UTS[mk].readings[key]||{};
+  tr.querySelectorAll('input.rd').forEach(inp=>{ inp.value = r[inp.dataset.k]??''; inp.dataset.c = readingClass(mk, r[inp.dataset.k]); });
+  const vals = KS.map(k=>num(r[k])).filter(x=>x!==null), mn = vals.length?Math.min(...vals):null;
+  const td = tr.querySelector('.mn'); td.textContent = mn===null?'':mn.toFixed(1); td.dataset.c = readingClass(mk,mn);
+}
+function renderSummary(){
+  const mk = UTS.active, list = ringsFor(mk), rd = UTS[mk].readings;
+  let n=0, tot=list.length*4, mn=null, at='', low=0; const ffs = num(UTS[mk].ffs);
+  list.forEach((R,i)=>KS.forEach(k=>{ const v = num((rd[R.key]||{})[k]); if(v===null) return; n++; if(ffs!==null && v<ffs) low++; if(mn===null||v<mn){ mn=v; at=`R${String(i+1).padStart(2,'0')} ${R.label}, ${KNAME(k)} o'clock`; } }));
+  const sumEl = $('sum'); sumEl.replaceChildren(h('b', null, String(n)), ` of ${tot} readings`);
+  if(mn!==null) sumEl.append(' · min ', h('b', null, `${mn.toFixed(1)} mm`), ` at ${at}`);
+  if(ffs===null) sumEl.append(' · ', h('span', {class:'warn'}, 'enter the FFS limit to flag low readings'));
+  else sumEl.append(' · ', h('b', {class: low ? 'bad' : null}, String(low)), ' below FFS');
+  $('mem-title').textContent = (UTS[mk].id ? UTS[mk].id + ' — ' : '') + MEM[mk].name;
+  const opt = $('mem-sel').querySelector(`option[value="${mk}"]`);
+  if(opt){ const id = UTS[mk].id; opt.textContent = `${MEM[mk].name}${id?' · '+id:''}  (${n}/${tot})`; }
+}
+
+// selection + popover
+function ringIndex(mk,key){ return ringsFor(mk).findIndex(R=>R.key===key); }
+function select(sel, openPop){
+  const prev = selected; selected = sel;
+  if(sel){ const R = ringsFor(sel.mk).find(x=>x.key===sel.key); if(R){ selMark.position.copy(pointPos(sel.mk,R.s,sel.k)); selMark.visible = true; } }
+  else selMark.visible = false;
+  if(!sel){ pop.hidden = true; return; }
+  if(openPop){
+    if(sel.mk!==UTS.active) setActive(sel.mk,false);
+    const i = ringIndex(sel.mk, sel.key), R = ringsFor(sel.mk)[i];
+    popHead.textContent = `${UTS[sel.mk].id || MEM[sel.mk].name} · R${String(i+1).padStart(2,'0')} ${R.label} · ${KNAME(sel.k)} o'clock`;
+    popVal.value = (UTS[sel.mk].readings[sel.key]||{})[sel.k] ?? '';
+    popRem.value = (UTS[sel.mk].remarks||{})[sel.key] || '';
+    pop.hidden = false; popVal.focus(); popVal.select();
+  }
+}
+function step(dir){
+  const s = selected; if(!s) return;
+  const list = ringsFor(s.mk); let i = ringIndex(s.mk,s.key), j = KS.indexOf(s.k) + dir;
+  if(j>3){ j=0; i++; } if(j<0){ j=3; i--; }
+  if(i<0 || i>=list.length){ select(null); return; }
+  select({mk:s.mk, key:list[i].key, k:KS[j]}, true);
+}
+function commitPop(){
+  const s = selected; if(!s) return true;
+  if(!setReading(s.mk, s.key, s.k, popVal.value)) return false;
+  UTS[s.mk].remarks = UTS[s.mk].remarks||{};
+  const rem = popRem.value.trim(); if(rem) UTS[s.mk].remarks[s.key]=rem; else delete UTS[s.mk].remarks[s.key];
+  saveState(); if(s.mk===UTS.active){ renderTable(); renderSummary(); }
+  return true;
+}
+popVal.addEventListener('keydown', e=>{
+  if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); if(commitPop()) step(e.shiftKey?-1:1); }
+  if(e.key==='Escape'){ select(null); }
+});
+popRem.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(commitPop()) step(1); } if(e.key==='Escape') select(null); });
+$('pop-next').addEventListener('click', ()=>{ if(commitPop()) step(1); });
+$('pop-close').addEventListener('click', ()=>{ commitPop(); select(null); });
+
+// picking in the 3D view (click without drag)
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let down = null;
+canvas.addEventListener('pointerdown', e=>{ down = {x:e.clientX, y:e.clientY}; });
+canvas.addEventListener('pointerup', e=>{
+  if(e.__handled){ down = null; return; }
+  if(!down || Math.hypot(e.clientX-down.x, e.clientY-down.y) > 5) return; down = null;
+  if(!G.rings.visible) return;
+  const r = canvas.getBoundingClientRect();
+  mouse.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(mouse, camera);
+  const hit = PICKI ? ray.intersectObject(PICKI, false)[0] : null;
+  if(hit && hit.instanceId!==undefined){ const p = INST[hit.instanceId]; if(selected) commitPop(); select({mk:p.mk, key:p.key, k:p.k}, true); }
+});
+const ptmp = new THREE.Vector3();
+function placePop(){
+  if(pop.hidden || !selected) return;
+  const R = ringsFor(selected.mk).find(x=>x.key===selected.key); if(!R) return;
+  ptmp.copy(pointPos(selected.mk, R.s, selected.k)); ptmp.project(camera);
+  const w = view.clientWidth, h = view.clientHeight;
+  let x = (ptmp.x+1)/2*w + 16, y = (1-ptmp.y)/2*h - 20;
+  x = Math.min(Math.max(8, x), w - pop.offsetWidth - 8); y = Math.min(Math.max(48, y), h - pop.offsetHeight - 8);
+  pop.style.left = x+'px'; pop.style.top = y+'px';
+}
+
+// ---------- files: save, backup, CSV, export into the ITP workbook
+async function saveFile(filename, data){
+  if(window.claude && window.claude.use){
+    let dl = null; try{ dl = await window.claude.use('downloads'); }catch(e){}
+    if(!dl){ toast('Saving files is not available in this view. Use the offline copy of this page.', true); return false; }
+    try{ await dl.save({filename, data}); toast('Saved ' + filename); return true; }
+    catch(e){ toast(e && e.code==='declined' ? 'Save cancelled.' : 'Could not save: ' + ((e && (e.message||e.code)) || 'unknown error'), e && e.code!=='declined'); return false; }
+  }
+  const blob = data instanceof Blob ? data : new Blob([data]);
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 5000); toast('Downloaded ' + filename); return true;
+}
+const stamp = () => new Date().toISOString().slice(0,10);
+$('btn-backup').addEventListener('click', ()=>saveFile(`SSL-UT-data-backup-${stamp()}.json`, JSON.stringify({format:BACKUP_FMT, version:1, saved:new Date().toISOString(), data:UTS}, null, 1)));
+$('btn-load').addEventListener('click', ()=>$('file-backup').click());
+$('file-backup').addEventListener('change', async e=>{
+  const f = e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    if(!d || d.format!==BACKUP_FMT) throw new Error('not an SSL UT data backup from this page');
+    if(persistence.mode==='shared' && persistence.role==='editor' && !(await persistence.askConfirm("This will replace the team's current SSL Inspection ITP. Continue?", 'Replace'))) return;
+    const keepActive = UTS.active; UTS = mergeState(d.data); UTS.active = keepActive; saveState(); buildMember(); setActive(UTS.active,false);
+    if(persistence.mode==='shared'){ const ok = await persistence.replaceShared('import'); toast(ok ? 'Loaded ' + f.name + ' — the team copy has been replaced.' : 'Loaded ' + f.name + ' in this browser; the team copy could not be updated yet.', !ok); }
+    else toast('Loaded ' + f.name);
+  }catch(err){ toast('Could not load ' + f.name + ': ' + err.message, true); }
+});
+$('btn-csv').addEventListener('click', ()=>{
+  const mk = UTS.active, m = UTS[mk], list = ringsFor(mk);
+  const rows = [['Member ID','Member','Ring', MEM[mk].kind==='elev'?'Elevation (m rel. LAT)':'Axial position (mm)','12','3','6','9','Min','Remarks']];
+  list.forEach((R,i)=>{ const r = m.readings[R.key]||{}; const vals = KS.map(k=>num(r[k])).filter(x=>x!==null);
+    rows.push([m.id, MEM[mk].name, 'R'+String(i+1).padStart(2,'0'), R.pos, ...KS.map(k=>r[k]??''), vals.length?Math.min(...vals):'', (m.remarks||{})[R.key]||'']); });
+  const XL = xlist(mk); if(XL.length){ rows.push([]); rows.push(['Member ID','Member','Point', MEM[mk].kind==='elev'?'Elevation (m rel. LAT)':'Axial position (mm)','Clock','WT (mm)','Moved from','Note']);
+    XL.forEach(x=>rows.push([m.id, MEM[mk].name, xLabel(x), x.pos, KNAME(+x.clock), x.val??'', xFromLabel(mk,x), x.note||''])); }
+  const csv = rows.map(r=>r.map(x=>{ const s=String(x); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }).join(',')).join('\r\n');
+  saveFile(`${m.id||MEM[mk].name}-UT-initial-${stamp()}.csv`, csv);
+});
+// clear (two-step, no dialogs)
+let clearArm = null;
+$('btn-clear').addEventListener('click', e=>{
+  const b = e.currentTarget;
+  if(!clearArm){ b.textContent = 'Click again to clear'; b.classList.add('armed'); clearArm = setTimeout(()=>{ clearArm=null; b.textContent='Clear readings'; b.classList.remove('armed'); }, 3500); return; }
+  clearTimeout(clearArm); clearArm=null; b.textContent='Clear readings'; b.classList.remove('armed');
+  UTS[UTS.active].readings = {}; UTS[UTS.active].remarks = {}; UTS[UTS.active].extra = []; saveState(); if(typeof buildExtra==='function'){ buildExtra(); renderExtra(); } recolour(UTS.active); renderTable(); renderSummary(); renderMemberSelect(); toast('Readings cleared for ' + MEM[UTS.active].name + '.');
+});
+
+// Excel export — fills the member ITP workbook (F12221-ITP-002) chosen by the user
+function loadExcelJS(){
+  if(window.ExcelJS) return Promise.resolve(window.ExcelJS);
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload=()=>res(window.ExcelJS); s.onerror=()=>rej(new Error('the Excel library could not load. Check the connection, or use the offline copy of this page.')); document.head.appendChild(s); });
+}
+function cellText(v){ if(v===null||v===undefined) return ''; if(typeof v==='string') return v; if(v.richText) return v.richText.map(x=>x.text).join(''); return ''; }
+function labelCell(ws, text, map){
+  let hit = null;
+  ws.eachRow({includeEmpty:false}, (row, rn)=>{ if(hit) return;
+    row.eachCell({includeEmpty:false}, cell=>{ if(hit) return;
+      const col = cell.address.replace(/\d+/g,'');
+      if(!map[col]) return;
+      if(cell.isMerged && cell.master.address!==cell.address) return;
+      if(cellText(cell.value).startsWith(text)) hit = ws.getCell(map[col]+rn);
+    });
+  });
+  return hit;
+}
+function put(ws, text, map, value){ const c = labelCell(ws, text, map); if(c && value!==null && value!==undefined && value!=='') c.value = value; return !!c; }
+$('btn-itp').addEventListener('click', ()=>{
+  const mk = UTS.active, m = UTS[mk];
+  if(!m.id){ toast('Enter the Member ID before exporting.', true); $('f-member-id').focus(); return; }
+  if(ringCount(mk) > 40){ toast('The ITP holds 40 rings. Reduce the extent or split the member.', true); return; }
+  $('file-itp').click();
+});
+$('file-itp').addEventListener('change', async e=>{
+  const f = e.target.files[0]; e.target.value=''; if(!f) return;
+  const mk = UTS.active, m = UTS[mk], c = UTS.common, list = ringsFor(mk);
+  const btn = $('btn-itp'); btn.disabled = true; btn.textContent = 'Exporting…';
+  try{
+    const ExcelJS = await loadExcelJS();
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer());
+    const cv = wb.getWorksheet('Cover'), ms = wb.getWorksheet('Member Survey');
+    if(!cv || !ms) throw new Error('this is not the F12221-ITP-002 member ITP workbook (no Cover / Member Survey sheet).');
+    const CV = {A:'B'}, MS = {A:'D', K:'P'};
+    put(cv,'Member ID',CV,m.id); put(cv,'Structure',CV,m.structure); put(cv,'Member type',CV,MEM[mk].type); put(cv,'Member orientation',CV,MEM[mk].orient);
+    put(cv,'Nominal OD (mm)',CV,num(m.od)); put(cv,'Nominal WT (mm)',CV,num(m.wt));
+    const dt = c.date ? new Date(c.date+'T00:00:00Z') : null;
+    if(dt) put(cv,'Date:',CV,dt);
+    if(dt) put(ms,'Inspection date',MS,dt);
+    put(ms,'UT operator',MS,c.operator); put(ms,'Operator cert no.',MS,c.cert); put(ms,'Equipment ID',MS,c.equip);
+    put(ms,'Fit-for-service limit',MS,num(m.ffs)); put(ms,'HAT (m rel. LAT)',MS,num(c.hat));
+    put(ms,'Ring pitch',MS,500); put(ms,'Positions per ring',MS,4);
+    if(MEM[mk].kind==='elev'){ put(ms,'Survey bottom',MS,num(m.bottom)); put(ms,'Survey top',MS,num(m.top)); }
+    else put(ms,'Member length between welds',MS,num(m.length));
+    if(MEM[mk].kind!=='elev') put(ms,'Axial datum (braces)',MS,MEM[mk].datum.replace(/^Datum: /,''));
+    // ring grid: rows R01–R40 in column A; C elev, D axial, E/H/K/N = 12/3/6/9, V remarks
+    const rows = []; ms.eachRow({includeEmpty:false},(row,rn)=>{ const t = cellText(row.getCell(1).value); if(/^(R|AP)\d\d$/.test(t) && rows.length<40) rows.push(rn); });
+    const xplan = extraPlan(mk, list), need = list.length + xplan.newRows.length;
+    if(rows.length < need) throw new Error(`the workbook has ${rows.length} ring rows; ${need} are needed (${list.length} rings + ${xplan.newRows.length} rows of additional points).`);
+    const COLS = {0:'E',3:'H',6:'K',9:'N'};
+    rows.forEach(rn=>{ ['C','D','E','F','G','H','I','J','K','L','M','N','O','P','V'].forEach(cl=>{ ms.getCell(cl+rn).value = null; }); });
+    list.forEach((R,i)=>{
+      const rn = rows[i], r = m.readings[R.key]||{};
+      if(MEM[mk].kind==='elev') ms.getCell('C'+rn).value = R.pos; else ms.getCell('D'+rn).value = R.pos;
+      KS.forEach(k=>{ const v = num(r[k]); if(v!==null) ms.getCell(COLS[k]+rn).value = v; });
+    });
+    // additional points: into a ring row where they share its position and a free clock column, else into their own AP rows after the rings
+    const XC = k => 'EFGHIJKLMNOP'.charAt(+k);   // E = 12 o'clock … P = 11
+    const rems = list.map(R=>{ const r = (m.remarks||{})[R.key]; return r ? [r] : []; });
+    rows.forEach((rn,i)=>{ ms.getCell('A'+rn).value = 'R'+String(i+1).padStart(2,'0'); });
+    xplan.moved.forEach(({ri,k,x})=>rems[ri].push(`${KNAME(k)} o'clock moved to ${xLabel(x)} (${xPosLabel(mk,x)}, ${KNAME(+x.clock)} o'clock)${x.note?': '+x.note:''}`));
+    xplan.inRing.forEach(({ri,k,x})=>{ const v = num(x.val); if(v!==null) ms.getCell(XC(k)+rows[ri]).value = v;
+      if(!x.from || ringsFor(mk).findIndex(R=>R.key===x.from.key)!==ri || +x.from.k!==k) rems[ri].push(`${KNAME(k)} o'clock = additional point ${xLabel(x)}${x.from?' (moved from '+xFromLabel(mk,x)+')':''}${x.note?': '+x.note:''}`); });
+    rems.forEach((r,i)=>{ if(r.length) ms.getCell('V'+rows[i]).value = r.join(' · '); });
+    xplan.newRows.forEach((g,j)=>{
+      const rn = nth(rows, list.length + j);
+      ms.getCell('A'+rn).value = xLabel(g.items[0]);
+      if(MEM[mk].kind==='elev') ms.getCell('C'+rn).value = +(+g.pos).toFixed(3); else ms.getCell('D'+rn).value = Math.round(g.pos);
+      g.items.forEach(x=>{ const v = num(x.val); if(v!==null) ms.getCell(XC(x.clock)+rn).value = v; });
+      ms.getCell('V'+rn).value = 'Additional point' + (g.items.length>1?'s ':' ') + g.items.map(x=>`${xLabel(x)} at ${KNAME(+x.clock)} o'clock${x.from?' (moved from '+xFromLabel(mk,x)+')':''}${x.note?': '+x.note:''}`).join('; ');
+    });
+    const nDef = await exportDefects(wb, mk, ms);
+    const nPts = writePointRegister(wb, mk).rowCount - 4;
+    wb.calcProperties = Object.assign({}, wb.calcProperties, {fullCalcOnLoad:true});
+    const out = await wb.xlsx.writeBuffer();
+    const n = list.reduce((a,R)=>a+KS.filter(k=>num((m.readings[R.key]||{})[k])!==null).length,0);
+    await saveFile(`F12221-ITP-002-${m.id.replace(/[^\w.-]+/g,'_')}.xlsx`, new Blob([out]));
+    $('export-note').textContent = `Last export: ${m.id}, ${list.length} rings, ${n} readings${xlist(mk).length ? ` + ${xlist(mk).length} additional point${xlist(mk).length>1?'s':''}` : ''}, into ${f.name}${nDef ? `, plus ${nDef} defect sheet${nDef>1?'s':''}` : ''}. Point Register: ${nPts} point IDs.`;
+  }catch(err){ toast('Export failed: ' + err.message, true); }
+  finally{ btn.disabled = false; btn.textContent = 'Export to ITP workbook'; }
+});
+
+setActive(UTS.active, false);
+
+
+// ================================================================ DEFECT MODULE
+// Add defects anywhere on a member; the FZ-GDN station grid (landing / defect zones, 12 positions per ring) and the
+// type-specific points (hole edges, pit, crack tips, dent calipers) are generated around each one.
+const DTYPES = {
+  hole:    {label:'Through-wall hole',        sheet:'Through-wall',          col:0x0b0d10},
+  wallloss:{label:'Wall loss / corrosion',    sheet:'Wall loss below FFS',   col:0x6b3a1e},
+  pitting: {label:'Pitting (single pit)',     sheet:'Significant pitting',   col:0x3a2a1a},
+  crack:   {label:'Crack',                    sheet:'Crack',                 col:0xd62828},
+  dent:    {label:'Dent / deformation',       sheet:'Dent / deformation',    col:0x6a3fa0},
+};
+const RULES_DEF = {land:300, pitchL:100, pitchD:50, margin:50, edge:25, nodeDist:300};
+const RULE_LABELS = {land:'Landing length each side (mm)', pitchL:'Landing ring pitch (mm)', pitchD:'Defect ring pitch (mm)',
+  margin:'Zone margin beyond visible defect (mm)', edge:'Hole / pit edge offset (mm)', nodeDist:'Node proximity check (mm)'};
+const CAP = {LA:6, D:16, LB:6, H:4, P:12};
+if(!UTS.common.rules) UTS.common.rules = Object.assign({}, RULES_DEF);
+MKEYS.forEach(k=>{ if(!Array.isArray(UTS[k].defects)) UTS[k].defects = []; });
+G.defx = new THREE.Group(); scene.add(G.defx);
+const DVIS = new THREE.Group(), MPG = new THREE.Group(); G.defx.add(DVIS); G.defx.add(MPG);
+const rules = () => Object.assign({}, RULES_DEF, UTS.common.rules||{});
+
+// ---- member helpers (s = metres along the member axis from M.o)
+function memRange(mk){ const L = ringsFor(mk); return L.length ? [L[0].s, L[L.length-1].s] : [0,0]; }
+function sFromPos(mk, pos){ return MEM[mk].kind==='elev' ? +pos : MEM[mk].toS(+pos); }
+function posFromS(mk, s){ return MEM[mk].kind==='elev' ? +s.toFixed(3) : Math.round((s - MEM[mk].toS(0))*1000); }
+function posLabel(mk, s){ return MEM[mk].kind==='elev' ? `${s>=0?'+':'−'}${Math.abs(s).toFixed(2)} m` : `${posFromS(mk,s)} mm`; }
+function sheetPos(mk, s){ return MEM[mk].kind==='elev' ? Math.round(s*1000) : posFromS(mk,s); }   // D-S column C (mm)
+function odmm(mk){ return num(UTS[mk].od) || Math.round(MEM[mk].r*2000); }
+function hourMM(mk){ return Math.PI*odmm(mk)/12; }   // arc length of one clock hour
+function normK(k){ return ((k%12)+12)%12; }
+function fmtK(k){ const h = normK(k); const hh = Math.floor(h+1e-6), mm = Math.round((h-hh)*60); const H = hh===0?12:hh; return mm ? `${H}:${String(mm).padStart(2,'0')}` : `${H}`; }
+
+// ---- grid generation
+function genDefect(mk, d){
+  const R = rules(), M = MEM[mk], warn = [];
+  let ax = Math.max(1, num(d.ax)||0), cw = Math.max(1, num(d.cw)||0);
+  if(d.type==='pitting'){ ax = cw = Math.max(1, num(d.dia)||num(d.ax)||20); }
+  if(d.type==='crack'){ const L = Math.max(1, num(d.len)||0), th = (num(d.ang)||0)*Math.PI/180; ax = Math.max(1, Math.abs(L*Math.cos(th))); cw = Math.max(1, Math.abs(L*Math.sin(th))); }
+  const sc = sFromPos(mk, d.pos), [smin, smax] = memRange(mk);
+  const half = (ax/2 + R.margin)/1000;
+  let z0 = sc - half, z1 = sc + half;
+  if(z0 < smin){ warn.push('Defect zone runs past the member start — continue onto the adjacent member or node.'); z0 = smin; }
+  if(z1 > smax){ warn.push('Defect zone runs past the member end — continue onto the adjacent member or node.'); z1 = smax; }
+  // defect stations: pitch widened if needed to fit 16 rows
+  let pD = R.pitchD/1000, nD = Math.floor((z1-z0)/pD + 1e-6) + 1;
+  if(nD > CAP.D){ pD = (z1-z0)/(CAP.D-1); nD = CAP.D; warn.push(`Defect zone needs more than ${CAP.D} rings at ${R.pitchD} mm — pitch widened to ${Math.round(pD*1000)} mm to fit the D-S sheet.`); }
+  const st = [];
+  const span = (nD-1)*pD, off = ((z1-z0) - span)/2;
+  for(let i=0;i<nD;i++) st.push({id:`D${i+1}`, zone:'Defect', s:z0+off+i*pD});
+  // landings
+  let pL = R.pitchL/1000, nL = Math.max(1, Math.round(R.land/R.pitchL));
+  if(nL > CAP.LA){ pL = (R.land/1000)/CAP.LA; nL = CAP.LA; warn.push(`Landing needs more than ${CAP.LA} rings at ${R.pitchL} mm — landing pitch widened to ${Math.round(pL*1000)} mm.`); }
+  const la = [], lb = [];
+  for(let i=nL;i>=1;i--){ const s = z0 - i*pL; if(s >= smin-1e-6) la.push(s); }
+  for(let i=1;i<=nL;i++){ const s = z1 + i*pL; if(s <= smax+1e-6) lb.push(s); }
+  if(la.length < nL) warn.push(`Landing A truncated at the member ${MEM[mk].kind==='elev'?'bottom':'datum end'} (${la.length} of ${nL} rings) — extend onto the adjacent member / node and use the node rules.`);
+  if(lb.length < nL) warn.push(`Landing B truncated at the member ${MEM[mk].kind==='elev'?'top':'far end'} (${lb.length} of ${nL} rings) — extend onto the adjacent member / node and use the node rules.`);
+  la.forEach((s,i)=>st.unshift(null)); st.splice(0, la.length, ...la.map((s,i)=>({id:`LA${i+1}`, zone:'Landing A', s})));
+  lb.forEach((s,i)=>st.push({id:`LB${i+1}`, zone:'Landing B', s}));
+  // node proximity (member ends are nodes or clamp / hub connections)
+  const nd = R.nodeDist/1000, lo = la.length ? la[0] : z0, hi = lb.length ? lb[lb.length-1] : z1;
+  if(lo - smin < nd || smax - hi < nd) warn.push(`Grid is within ${R.nodeDist} mm of a member end — node rules apply (FZ-GDN Step 7): chord rings ≥300 mm from the brace face, record on a D-N sheet.`);
+  // circumferential span of the visible defect in clock hours
+  const kc = normK(num(d.clock)||0), halfK = (cw/2)/hourMM(mk);
+  if(cw >= Math.PI*odmm(mk)*0.999) warn.push('Defect extends around the full circumference.');
+  const extras = {};
+  const eo = R.edge;
+  if(d.type==='hole') extras.edges = [['+ax', sc+(ax/2+eo)/1000, kc], ['−ax', sc-(ax/2+eo)/1000, kc], ['CW', sc, kc+halfK+eo/hourMM(mk)], ['CCW', sc, kc-halfK-eo/hourMM(mk)]];
+  if(d.type==='pitting') extras.pit = {s:sc, k:kc, around:[['+ax',sc+(ax/2+eo)/1000,kc],['−ax',sc-(ax/2+eo)/1000,kc],['CW',sc,kc+halfK+eo/hourMM(mk)],['CCW',sc,kc-halfK-eo/hourMM(mk)]]};
+  if(d.type==='crack'){ const L=(num(d.len)||0)/1000, th=(num(d.ang)||0)*Math.PI/180; extras.tips = [[sc - L/2*Math.cos(th), kc - (L/2*Math.sin(th)*1000)/hourMM(mk)], [sc + L/2*Math.cos(th), kc + (L/2*Math.sin(th)*1000)/hourMM(mk)]]; }
+  if(d.type==='dent') extras.caliper = {s:sc};
+  return {stations:st, zone:[z0,z1], sc, kc, halfK, ax, cw, warn, extras};
+}
+
+// ---- 3D
+let DEFPICK = [], defLabels = [], dsel = null;   // dsel: {mk, di, st, k} — k: 0..11 or 'edge:+ax' / 'pit'
+let activeDef = null;                          // index into UTS[active].defects
+const dPtGeo = new THREE.SphereGeometry(0.012,8,6), dPickGeo = new THREE.SphereGeometry(0.035,6,4);
+const dPickMat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false});
+const dSelMark = new THREE.Mesh(new THREE.SphereGeometry(0.03,14,10), new THREE.MeshBasicMaterial({color:0xffd400}));
+dSelMark.visible = false; G.defx.add(dSelMark);
+function patch(mk, s0, s1, k0, k1, rOff, color, op){
+  const M = MEM[mk], nA = 6, nC = Math.max(4, Math.ceil((k1-k0)*6));
+  const pos = [], idx = [];
+  for(let i=0;i<=nA;i++) for(let j=0;j<=nC;j++){
+    const s = s0+(s1-s0)*i/nA, k = k0+(k1-k0)*j/nC, p = clockPos(M.o.clone().addScaledVector(M.a,s), M.f, M.u, M.r+rOff, k);
+    pos.push(p.x,p.y,p.z);
+  }
+  for(let i=0;i<nA;i++) for(let j=0;j<nC;j++){ const a=i*(nC+1)+j, b=a+1, c=a+nC+1, d2=c+1; idx.push(a,c,b, b,c,d2); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide, transparent:op<1, opacity:op, depthWrite:op>=1}));
+}
+function dVal(d, st, k){ return ((d.rd||{})[st]||{})[k]; }
+function buildDefects(){
+  defLabels.forEach(untag); defLabels = []; DEFPICK = [];
+  while(DVIS.children.length) DVIS.remove(DVIS.children[0]);
+  const T = (...a)=>{ const r = tag(...a); defLabels.push(r); return r; };
+  MKEYS.forEach(mk=>{
+    const M = MEM[mk];
+    (UTS[mk].defects||[]).forEach((d,di)=>{
+      const g = new THREE.Group(); DVIS.add(g);
+      const r = genDefect(mk, d), isAct = (mk===UTS.active && di===activeDef);
+      const halfS = r.ax/2000;
+      // visible defect
+      if(d.type==='crack'){
+        const [[s1,k1],[s2,k2]] = r.extras.tips, pts=[];
+        for(let i=0;i<=20;i++){ const t=i/20; pts.push(clockPos(M.o.clone().addScaledVector(M.a,s1+(s2-s1)*t), M.f, M.u, M.r+0.006, k1+(k2-k1)*t)); }
+        const ln = line(pts, DTYPES.crack.col, g); ln.material.linewidth = 2;
+        [[s1,k1],[s2,k2]].forEach(([s,k])=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(0.01,8,6), new THREE.MeshBasicMaterial({color:0xd62828})); m.position.copy(clockPos(M.o.clone().addScaledVector(M.a,s),M.f,M.u,M.r+0.008,k)); g.add(m); });
+      } else {
+        g.add(patch(mk, r.sc-halfS, r.sc+halfS, r.kc-r.halfK, r.kc+r.halfK, 0.005, DTYPES[d.type].col, d.type==='hole'?1:0.85));
+      }
+      if(d.type==='dent'){ [0,3].forEach(k=>line([clockPos(M.o.clone().addScaledVector(M.a,r.sc),M.f,M.u,M.r+0.03,k), clockPos(M.o.clone().addScaledVector(M.a,r.sc),M.f,M.u,M.r+0.03,k+6)], 0x6a3fa0, g)); }
+      // zones
+      const la = r.stations.filter(x=>x.zone==='Landing A'), lb = r.stations.filter(x=>x.zone==='Landing B');
+      band(M.o, M.a, r.zone[0], r.zone[1], M.r+0.0035, 0x3fa34d, isAct?.55:.35, g);
+      if(la.length) band(M.o, M.a, la[0].s-0.01, r.zone[0], M.r+0.0035, 0xf2c230, isAct?.6:.4, g);
+      if(lb.length) band(M.o, M.a, r.zone[1], lb[lb.length-1].s+0.01, M.r+0.0035, 0xf2c230, isAct?.6:.4, g);
+      // station rings + 12 points
+      r.stations.forEach(stn=>{
+        ring(M.o, M.a, stn.s, M.r+0.004, stn.zone==='Defect'?0x14501d:0x6b5300, g, 0.003);
+        for(let k=0;k<12;k++){
+          const p = clockPos(M.o.clone().addScaledVector(M.a,stn.s), M.f, M.u, M.r+0.008, k);
+          const cls = readingClass(mk, dVal(d, stn.id, k));
+          const m = new THREE.Mesh(dPtGeo, new THREE.MeshBasicMaterial({color: cls==='none' ? (stn.zone==='Defect'?0x1f7a36:0x8a6d00) : PT_COL[cls]}));
+          m.position.copy(p); g.add(m);
+          const pk = new THREE.Mesh(dPickGeo, dPickMat); pk.position.copy(p); pk.userData = {mk, di, st:stn.id, k, s:stn.s}; g.add(pk); DEFPICK.push(pk);
+        }
+        if(isAct) T(stn.id, M.o.clone().addScaledVector(M.a,stn.s).add(M.side.clone().multiplyScalar(0.8)), g, stn.zone==='Defect'?'#3fa34d':'#f2c230', 'dim', true);
+      });
+      // type extras
+      const extraPts = [];
+      if(r.extras.edges) r.extras.edges.forEach(([t,s,k])=>extraPts.push([`edge:${t}`, s, k, t]));
+      if(r.extras.pit){ extraPts.push(['pit', r.extras.pit.s, r.extras.pit.k, 'pit']); r.extras.pit.around.forEach(([t,s,k])=>extraPts.push([`edge:${t}`, s, k, t])); }
+      extraPts.forEach(([key,s,k,t])=>{
+        const p = clockPos(M.o.clone().addScaledVector(M.a,s), M.f, M.u, M.r+0.012, k);
+        const v = key==='pit' ? (d.pit||{}).rem : (d.edge||{})[t];
+        const m = new THREE.Mesh(new THREE.SphereGeometry(0.014,10,8), new THREE.MeshBasicMaterial({color: num(v)===null ? 0xd62828 : PT_COL[readingClass(mk,v)]}));
+        m.position.copy(p); g.add(m);
+        const pk = new THREE.Mesh(dPickGeo, dPickMat); pk.position.copy(p); pk.userData = {mk, di, st:key, k, s}; g.add(pk); DEFPICK.push(pk);
+        if(isAct) T(t, p.clone().add(clockPos(V(0,0,0),M.f,M.u,0.06,k)), g, '#d62828', 'dim', true);
+      });
+      T(`${defId(di)} · ${DTYPES[d.type].label}`, M.o.clone().addScaledVector(M.a,r.sc).add(M.side.clone().multiplyScalar(2.6)), g, '#3fa34d', isAct?'big':'dim', isAct?false:'far');
+    });
+  });
+}
+const defId = di => `D-S${String(di+1).padStart(2,'0')}`;
+
+// ---- picking: defect points (before the initial-inspection handler) and "pick on model" placement
+const dray = new THREE.Raycaster(), dmouse = new THREE.Vector2();
+let ddown = null, placing = false, placeMode = 'defect';
+const memPick = [];   // invisible cylinders over each member's inspected length
+function buildMemPick(){
+  memPick.forEach(m=>MPG.remove(m)); memPick.length = 0;
+  MKEYS.forEach(mk=>{ const M = MEM[mk], [s0,s1] = memRange(mk); if(s1<=s0) return;
+    const m = cyl(M.o.clone().addScaledVector(M.a,s0), M.o.clone().addScaledVector(M.a,s1), M.r+0.01, dPickMat, false); m.userData = {mk}; m.visible = false; memPick.push(m); MPG.add(m); });
+}
+function rayFrom(e){ const r = canvas.getBoundingClientRect(); dmouse.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); dray.setFromCamera(dmouse, camera); }
+function initialHitDist(){
+  try{
+    if(typeof PICKI!=='undefined' && PICKI){ const h = dray.intersectObject(PICKI,false)[0]; return h ? h.distance : Infinity; }
+    if(typeof PICK!=='undefined'){ const h = dray.intersectObjects(PICK,false)[0]; return h ? h.distance : Infinity; }
+  }catch(e){}
+  return Infinity;
+}
+canvas.addEventListener('pointerdown', e=>{
+  ddown = {x:e.clientX, y:e.clientY};
+  // same mouse controls everywhere, including Pick on model: left-drag rotates, right-drag pans, scroll zooms.
+  // A click (under 5 px of movement) places the defect / point; a drag only moves the model.
+  controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+}, true);
+// live preview of the placement point
+const prevMark = new THREE.Group();
+prevMark.add(new THREE.Mesh(new THREE.SphereGeometry(0.018,14,10), new THREE.MeshBasicMaterial({color:0xff2d55, depthTest:false})));
+prevMark.add(new THREE.Mesh(new THREE.TorusGeometry(0.06,0.004,6,40), new THREE.MeshBasicMaterial({color:0xff2d55, depthTest:false})));
+prevMark.renderOrder = 10; prevMark.children.forEach(m=>m.renderOrder = 10);
+prevMark.visible = false; G.defx.add(prevMark);
+const prevTag = document.createElement('div'); prevTag.className = 'tag prev-tag'; prevTag.hidden = true; labelLayer.appendChild(prevTag);
+const placeHint = document.createElement('div'); placeHint.className = 'place-hint'; placeHint.hidden = true;
+placeHint.append(h('b', null, 'Placing defect'), ' — click the member surface · drag to rotate · right-drag to pan · scroll to zoom · ', h('kbd', null, 'Esc'), ' cancel');
+view.appendChild(placeHint);
+function surfaceHit(e){
+  rayFrom(e);
+  const target = memPick.filter(m=>m.userData.mk===UTS.active);
+  const h = dray.intersectObjects(target, false)[0]; if(!h) return null;
+  const mk = h.object.userData.mk, M = MEM[mk];
+  const s = h.point.clone().sub(M.o).dot(M.a), c = M.o.clone().addScaledVector(M.a,s), rv = h.point.clone().sub(c);
+  const right = new THREE.Vector3().crossVectors(M.f, M.u).normalize();
+  const k = Math.round(normK(Math.atan2(rv.dot(right), rv.dot(M.u))/(Math.PI/6))*2)/2 % 12;
+  return {mk, s, k, M};
+}
+canvas.addEventListener('pointermove', e=>{
+  if(!placing){ return; }
+  const hit = (e.buttons===0) ? surfaceHit(e) : null;
+  if(!hit){ prevMark.visible = false; prevTag.hidden = true; canvas.style.cursor = 'crosshair'; return; }
+  const {mk, s, k, M} = hit, c = M.o.clone().addScaledVector(M.a,s);
+  prevMark.children[0].position.copy(clockPos(c, M.f, M.u, M.r+0.01, k));
+  prevMark.children[1].position.copy(c); prevMark.children[1].quaternion.setFromUnitVectors(V(0,0,1), M.a);
+  prevMark.children[1].geometry.dispose(); prevMark.children[1].geometry = new THREE.TorusGeometry(M.r+0.012, 0.004, 6, 40);
+  prevMark.visible = true;
+  prevTag.textContent = `${posLabel(mk,s)} · ${fmtK(k)} o'clock`;
+  const r = view.getBoundingClientRect(); prevTag.style.left = (e.clientX - r.left + 14)+'px'; prevTag.style.top = (e.clientY - r.top - 14)+'px';
+  prevTag.hidden = false; canvas.style.cursor = 'none';
+});
+canvas.addEventListener('pointerleave', ()=>{ prevMark.visible = false; prevTag.hidden = true; });
+window.addEventListener('keydown', e=>{ if(e.key==='Escape' && placing){ setPlacing(false); toast('Placement cancelled.'); } });
+canvas.addEventListener('pointerup', e=>{
+  if(!ddown || Math.hypot(e.clientX-ddown.x, e.clientY-ddown.y) > 5) return;
+  rayFrom(e);
+  if(placing){
+    e.__handled = true;   // don't stop propagation: OrbitControls needs this pointerup to end its drag
+    const hit = surfaceHit(e);
+    if(!hit){ toast(`Click on the surface of ${MEM[UTS.active].name} (the highlighted member) to place the ${placeMode==='point'?'point':'defect'}.`, true); return; }
+    if(placeMode==='point'){ xPlaced(hit); return; }
+    const {mk, s, k} = hit;
+    $('df-pos').value = MEM[mk].kind==='elev' ? s.toFixed(2) : String(posFromS(mk,s));
+    $('df-clock').value = String(k);
+    setPlacing(false); toast(`Located at ${posLabel(mk,s)}, ${fmtK(k)} o'clock — set the type and size, then save.`);
+    return;
+  }
+  if(!G.defx.visible) return;
+  const h = dray.intersectObjects(DEFPICK, false)[0];
+  if(h && h.distance <= initialHitDist() + 0.02){
+    e.__handled = true;
+    if(typeof pop!=='undefined' && !pop.hidden){ try{ commitPop(); }catch(_){} select(null); }
+    const u = h.object.userData;
+    if(u.mk!==UTS.active){ setActive(u.mk, false); }
+    if(activeDef!==u.di){ activeDef = u.di; renderDefects(); buildDefects(); }
+    openDPop(u);
+  }
+}, true);
+function setPlacing(on, mode){
+  if(on) placeMode = mode || 'defect';
+  placing = on;
+  ['df-place','xp-place'].forEach(id=>{ const b = $(id); if(!b) return; const act = on && (id==='xp-place') === (placeMode==='point'); b.classList.toggle('armed', act); b.textContent = act ? 'Click the member in the model…' : 'Pick on model'; });
+  placeHint.querySelector('b').textContent = placeMode==='point' ? 'Placing inspection point' : 'Placing defect';
+  controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE; controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+  canvas.style.cursor = on ? 'crosshair' : ''; controls.enableDamping = false;
+  placeHint.hidden = !on;
+  if(!on){ prevMark.visible = false; prevTag.hidden = true; }
+}
+
+// ---- defect point popover
+const dpop = $('dpop'), dpVal = $('dp-val'), dpHead = $('dp-head');
+function openDPop(u){
+  dsel = u; const d = UTS[u.mk].defects[u.di];
+  const label = u.st==='pit' ? 'Pit — remaining WT (UT)' : u.st.startsWith('edge:') ? `Edge reading ${u.st.slice(5)}` : `${u.st} · ${fmtK(u.k)} o'clock`;
+  dpHead.textContent = `${UTS[u.mk].id||MEM[u.mk].name} · ${defId(u.di)} · ${label}`;
+  dpVal.value = u.st==='pit' ? ((d.pit||{}).rem??'') : u.st.startsWith('edge:') ? ((d.edge||{})[u.st.slice(5)]??'') : (dVal(d,u.st,u.k)??'');
+  dpop.hidden = false; dpVal.focus(); dpVal.select();
+  dSelMark.position.copy(clockPos(MEM[u.mk].o.clone().addScaledVector(MEM[u.mk].a,u.s), MEM[u.mk].f, MEM[u.mk].u, MEM[u.mk].r+0.012, u.k)); dSelMark.visible = true;
+}
+function closeDPop(){ dpop.hidden = true; dsel = null; dSelMark.visible = false; }
+function setDReading(mk, di, st, k, raw){
+  const v = String(raw).trim().replace(',', '.');
+  if(v!=='' && (isNaN(+v) || +v<0 || +v>200)){ toast(`"${raw}" is not a thickness in mm.`, true); return false; }
+  const d = UTS[mk].defects[di];
+  if(st==='pit'){ d.pit = d.pit||{}; if(v==='') delete d.pit.rem; else d.pit.rem = +v; }
+  else if(st.startsWith('edge:')){ d.edge = d.edge||{}; const t = st.slice(5); if(v==='') delete d.edge[t]; else d.edge[t] = +v; }
+  else { d.rd = d.rd||{}; d.rd[st] = d.rd[st]||{}; if(v==='') delete d.rd[st][k]; else d.rd[st][k] = +v; }
+  saveState(); return true;
+}
+function dStep(dir){
+  const u = dsel; if(!u) return;
+  const d = UTS[u.mk].defects[u.di], r = genDefect(u.mk, d);
+  if(u.st==='pit' || u.st.startsWith('edge:')){ closeDPop(); return; }
+  let i = r.stations.findIndex(x=>x.id===u.st), k = u.k + dir;
+  if(k>11){ k=0; i++; } if(k<0){ k=11; i--; }
+  if(i<0 || i>=r.stations.length){ closeDPop(); return; }
+  openDPop({mk:u.mk, di:u.di, st:r.stations[i].id, k, s:r.stations[i].s});
+}
+dpVal.addEventListener('keydown', e=>{
+  if(e.key==='Enter' || e.key==='Tab'){ e.preventDefault(); const u = dsel; if(u && setDReading(u.mk,u.di,u.st,u.k,dpVal.value)){ buildDefects(); renderDefTable(); dStep(e.shiftKey?-1:1); } }
+  if(e.key==='Escape') closeDPop();
+});
+$('dp-next').addEventListener('click', ()=>{ const u = dsel; if(u && setDReading(u.mk,u.di,u.st,u.k,dpVal.value)){ buildDefects(); renderDefTable(); dStep(1); } });
+$('dp-close').addEventListener('click', ()=>{ const u = dsel; if(u) setDReading(u.mk,u.di,u.st,u.k,dpVal.value); buildDefects(); renderDefTable(); closeDPop(); });
+const dtmp = new THREE.Vector3();
+function placeDPop(){
+  if(dpop.hidden || !dsel) return;
+  dtmp.copy(dSelMark.position).project(camera);
+  const w = view.clientWidth, h = view.clientHeight;
+  let x = (dtmp.x+1)/2*w + 16, y = (1-dtmp.y)/2*h - 20;
+  x = Math.min(Math.max(8, x), w - dpop.offsetWidth - 8); y = Math.min(Math.max(48, y), h - dpop.offsetHeight - 8);
+  dpop.style.left = x+'px'; dpop.style.top = y+'px';
+}
+
+// ---- panel: defect list, form, station table
+let editIdx = null;
+function defFormFields(type){
+  const show = id => { const el = $(id); el.closest('label').hidden = false; }, hide = id => { const el = $(id); el.closest('label').hidden = true; };
+  ['df-ax','df-cw','df-len','df-ang','df-dia','df-depth'].forEach(hide);
+  if(type==='crack'){ show('df-len'); show('df-ang'); }
+  else if(type==='pitting'){ show('df-dia'); show('df-depth'); }
+  else { show('df-ax'); show('df-cw'); if(type==='dent') show('df-depth'); }
+  $('df-pos-l').firstChild.textContent = MEM[UTS.active].kind==='elev' ? 'Centre elevation (m rel. LAT)' : 'Centre position from datum (mm)';
+}
+function openForm(idx){
+  editIdx = idx; const d = idx===null ? {type:'wallloss', pos:'', clock:'', ax:'', cw:'', len:'', ang:0, dia:'', depth:'', note:''} : UTS[UTS.active].defects[idx];
+  $('df-form').hidden = false; $('df-add').hidden = true;
+  $('df-title').textContent = idx===null ? 'New defect' : `Edit ${defId(idx)}`;
+  ['type','pos','clock','ax','cw','len','ang','dia','depth','note'].forEach(k=>{ const el = $('df-'+k); el.value = d[k]??''; });
+  defFormFields(d.type);
+}
+function closeForm(){ $('df-form').hidden = true; $('df-add').hidden = false; editIdx = null; setPlacing(false); }
+$('df-type').addEventListener('change', e=>defFormFields(e.target.value));
+$('df-add').addEventListener('click', ()=>openForm(null));
+$('df-cancel').addEventListener('click', closeForm);
+$('df-place').addEventListener('click', ()=>{ setPlacing(!(placing && placeMode==='defect'), 'defect'); if(placing){ G.rings.visible = true; } });
+$('df-save').addEventListener('click', ()=>{
+  const mk = UTS.active, g = k => $('df-'+k).value.trim();
+  const d = {type:g('type'), pos:g('pos'), clock:g('clock'), ax:g('ax'), cw:g('cw'), len:g('len'), ang:g('ang'), dia:g('dia'), depth:g('depth'), note:g('note')};
+  if(num(d.pos)===null){ toast('Enter the defect centre position, or use Pick on model.', true); return; }
+  if(num(d.clock)===null || +d.clock<0 || +d.clock>12){ toast('Enter the clock position (0–12).', true); return; }
+  if(d.type==='crack' && !(num(d.len)>0)){ toast('Enter the crack length.', true); return; }
+  if(d.type==='pitting' && !(num(d.dia)>0)){ toast('Enter the pit diameter.', true); return; }
+  if(!['crack','pitting'].includes(d.type) && !(num(d.ax)>0 && num(d.cw)>0)){ toast('Enter the axial length and circumferential width.', true); return; }
+  const s = sFromPos(mk, d.pos), [s0,s1] = memRange(mk);
+  if(s < s0-0.001 || s > s1+0.001){ toast(`Position is outside the inspected length (${posLabel(mk,s0)} to ${posLabel(mk,s1)}).`, true); return; }
+  const list = UTS[mk].defects;
+  if(editIdx===null){ if(list.length >= 9){ toast('Nine defects per member is the practical limit for one ITP workbook.', true); return; } list.push(Object.assign(d,{rd:{}, edge:{}, pit:{}})); activeDef = list.length-1; }
+  else { Object.assign(list[editIdx], d); activeDef = editIdx; }
+  saveState(); closeForm(); renderDefects(); buildDefects(); flyToDefect(mk, activeDef);
+  toast(`${defId(activeDef)} saved — ${genDefect(mk, list[activeDef]).stations.length} stations generated.`);
+});
+let delArm = null;
+function renderDefects(){
+  const mk = UTS.active, list = UTS[mk].defects||[];
+  if(activeDef!==null && activeDef >= list.length) activeDef = list.length ? list.length-1 : null;
+  const items = list.map((d,i)=>{
+    const r = genDefect(mk,d), n = r.stations.length*12, got = r.stations.reduce((a,x)=>a+Object.keys((d.rd||{})[x.id]||{}).length,0);
+    const size = d.type==='crack' ? `${d.len} mm @ ${d.ang||0}°` : d.type==='pitting' ? `Ø${d.dia} mm` : `${d.ax} × ${d.cw} mm`;
+    return h('li', {class: i===activeDef ? 'on' : null},
+      h('button', {type:'button', class:'dsel', 'data-i':i}, h('b', null, defId(i)), ' ', DTYPES[d.type].label,
+        h('span', null, `${posLabel(mk, sFromPos(mk,d.pos))} · ${fmtK(+d.clock)} o'clock · ${size} · ${got}/${n}`, r.warn.length ? [' · ', h('em', null, '⚠ ' + r.warn.length)] : null)),
+      h('button', {type:'button', class:'dedit', 'data-i':i, 'aria-label':'Edit ' + defId(i)}, 'Edit'),
+      h('button', {type:'button', class:'ddel', 'data-i':i, 'aria-label':'Delete ' + defId(i)}, 'Delete'));
+  });
+  $('df-list').replaceChildren(...(items.length ? items : [h('li', {class:'empty'}, 'No defects recorded on this member.')]));
+  renderDefTable();
+}
+$('df-list').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return; const i = +b.dataset.i, mk = UTS.active;
+  if(b.classList.contains('dsel')){ activeDef = i; renderDefects(); buildDefects(); flyToDefect(mk,i); }
+  if(b.classList.contains('dedit')) openForm(i);
+  if(b.classList.contains('ddel')){
+    if(delArm!==i){ delArm = i; b.textContent = 'Confirm'; b.classList.add('armed'); setTimeout(()=>{ if(delArm===i){ delArm=null; renderDefects(); } }, 3500); return; }
+    delArm = null; UTS[mk].defects.splice(i,1); activeDef = null; saveState(); renderDefects(); buildDefects(); toast('Defect deleted. Later defects are renumbered.');
+  }
+});
+function renderDefTable(){
+  const mk = UTS.active, d = activeDef===null ? null : (UTS[mk].defects||[])[activeDef];
+  $('df-detail').hidden = !d; if(!d) return;
+  const r = genDefect(mk, d);
+  $('df-warn').replaceChildren(...r.warn.map(w=>h('li', null, w)));
+  $('df-sum').textContent = `${defId(activeDef)}: zone ${posLabel(mk,r.zone[0])} to ${posLabel(mk,r.zone[1])} · visible defect ${fmtK(r.kc-r.halfK)}–${fmtK(r.kc+r.halfK)} o'clock · ${r.stations.length} stations × 12 positions`;
+  const inDef = k => { const dk = Math.abs(((k - r.kc + 18) % 12) - 6); return dk <= r.halfK + 0.01; };
+  $('df-head').replaceChildren(h('th', null, 'Stn'), h('th', null, 'Pos.'), ...Array.from({length:12},(_,k)=>h('th', {class: inDef(k) ? 'hit' : null}, String(k===0?12:k))));
+  $('df-body').replaceChildren(...r.stations.map(x=>h('tr', null, h('th', {class: x.zone==='Defect' ? 'dz' : 'lz'}, x.id), h('td', {class:'pos'}, posLabel(mk,x.s).replace(' mm','').replace(' m','')),
+    Array.from({length:12},(_,k)=>{ const v = dVal(d,x.id,k); return h('td', null, h('input', {class:'drd', 'data-st':x.id, 'data-k':k, inputmode:'decimal', value:v??'', 'data-c':readingClass(mk,v), 'aria-label':`${x.id} ${k===0?12:k} o'clock`})); }))));
+  const ex = [];
+  if(d.type==='hole') ex.push(...['+ax','−ax','CW','CCW'].map(t=>[`edge:${t}`, `Edge ${t} (mm)`, (d.edge||{})[t]]));
+  if(d.type==='pitting') ex.push(['pit','Pit remaining WT — UT (mm)', (d.pit||{}).rem], ['pitdepth','Pit depth — gauge (mm)', (d.pit||{}).depth], ...['+ax','−ax','CW','CCW'].map(t=>[`edge:${t}`, `Around pit ${t} (mm)`, (d.edge||{})[t]]));
+  if(d.type==='dent') ex.push(['od126',"OD 12–6 o'clock — caliper (mm)", (d.dentm||{}).od126], ['od39',"OD 3–9 o'clock — caliper (mm)", (d.dentm||{}).od39], ['dentd','Dent depth (mm)', (d.dentm||{}).depth]);
+  if(d.type==='crack') ex.push(['crackm','Crack length confirmed by MT / ACFM (mm)', (d.crackm||{}).len]);
+  $('df-extra').replaceChildren(...ex.map(([k,l,v])=>h('label', null, l, h('input', {class:'dex', 'data-k':k, inputmode:'decimal', value:v??''}))));
+  $('df-extra').hidden = !ex.length;
+}
+$('df-body').addEventListener('change', e=>{ const el = e.target; if(!el.classList.contains('drd')) return;
+  if(!setDReading(UTS.active, activeDef, el.dataset.st, +el.dataset.k, el.value)) el.value='';
+  el.dataset.c = readingClass(UTS.active, el.value); buildDefects(); });
+$('df-body').addEventListener('keydown', e=>{ if(e.key!=='Enter') return; e.preventDefault();
+  const ins = [...document.querySelectorAll('#df-body input.drd')], i = ins.indexOf(e.target);
+  e.target.dispatchEvent(new Event('change',{bubbles:true})); const nx = nth(ins, i+(e.shiftKey?-1:1)); if(nx){ nx.focus(); nx.select(); } });
+$('df-extra').addEventListener('change', e=>{ const el = e.target; if(!el.classList.contains('dex')) return;
+  const d = UTS[UTS.active].defects[activeDef], k = el.dataset.k, v = el.value.trim()==='' ? null : num(el.value.replace(',','.'));
+  if(el.value.trim()!=='' && v===null){ toast(`"${el.value}" is not a number.`, true); el.value=''; return; }
+  if(k==='pit' || k.startsWith('edge:')){ setDReading(UTS.active, activeDef, k, 0, el.value); }
+  else if(k==='pitdepth'){ d.pit = d.pit||{}; if(v===null) delete d.pit.depth; else d.pit.depth = v; }
+  else if(['od126','od39','dentd'].includes(k)){ d.dentm = d.dentm||{}; d.dentm[k==='dentd'?'depth':k] = v; }
+  else if(k==='crackm'){ d.crackm = {len:v}; }
+  saveState(); buildDefects(); });
+function flyToDefect(mk, di){
+  const d = UTS[mk].defects[di]; if(!d) return;
+  const M = MEM[mk], r = genDefect(mk, d), t1 = M.o.clone().addScaledVector(M.a, r.sc);
+  const n = clockPos(t1, M.f, M.u, 1, r.kc).sub(t1).normalize();
+  const span = Math.max(1.2, (r.stations.length ? Math.abs(r.stations[r.stations.length-1].s - r.stations[0].s) : 1)*1.3);
+  const p1 = t1.clone().addScaledVector(n, span).add(V(0, 0.25, 0));
+  G.defx.visible = true; const cb = $('L-defx'); if(cb) cb.checked = true;
+  if(reduceMotion){ camera.position.copy(p1); controls.target.copy(t1); controls.update(); return; }
+  tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:700};
+}
+// rules editor
+function renderRules(){
+  const R = rules();
+  $('df-rules').replaceChildren(...Object.keys(RULES_DEF).map(k=>h('label', null, `${RULE_LABELS[k]} [TBC]`, h('input', {class:'drule', 'data-k':k, inputmode:'decimal', value:R[k]}))));
+}
+$('df-rules').addEventListener('change', e=>{ const el = e.target; const v = num(el.value);
+  if(v===null || v<=0){ toast('Enter a positive value in mm.', true); el.value = rules()[el.dataset.k]; return; }
+  UTS.common.rules = Object.assign(rules(), {[el.dataset.k]: v}); saveState(); renderDefects(); buildDefects(); });
+renderRules();
+
+// ---- export: one D-S sheet per defect + Member Survey Section J rows
+function cloneSheet(wb, src, name){
+  const ws = wb.addWorksheet(name), m = JSON.parse(JSON.stringify(src.model));
+  delete m.id; m.name = name; ws.model = m;
+  (src.model.merges||[]).forEach(r=>{ try{ ws.mergeCells(r); }catch(e){} });
+  return ws;
+}
+async function exportDefects(wb, mk, ms){
+  const list = UTS[mk].defects||[]; if(!list.length) return 0;
+  const tpl = wb.getWorksheet('D-S01'); if(!tpl) throw new Error('the workbook has no D-S01 defect sheet to copy.');
+  const pristine = JSON.parse(JSON.stringify(tpl.model));
+  const sheets = [tpl];
+  for(let i=1;i<list.length;i++){ const nm = defId(i); const old = wb.getWorksheet(nm); if(old) wb.removeWorksheet(old.id);
+    const ws = wb.addWorksheet(nm); const m = JSON.parse(JSON.stringify(pristine)); delete m.id; m.name = nm; ws.model = m; (pristine.merges||[]).forEach(r=>{ try{ ws.mergeCells(r); }catch(e){} }); sheets.push(ws); }
+  // order: D-S01, D-S02 … straight after D-S01
+  const order = wb.worksheets.map(w=>w); const base = order.indexOf(tpl);
+  const rest = order.filter(w=>!sheets.includes(w)); rest.splice(base, 0, ...sheets);
+  rest.forEach((w,i)=>{ w.orderNo = i; });
+  const DS = {A:'D', K:'P'}, M = MEM[mk], R = rules();
+  list.forEach((d,i)=>{
+    const ws = sheets[i], r = genDefect(mk, d), m = UTS[mk];
+    ws.getCell('P6').value = defId(i);
+    put(ws,'Member description',DS, M.name); put(ws,'Member type',DS, M.type); put(ws,'Member orientation',DS, M.orient);
+    put(ws,'Datum description',DS, M.kind==='elev' ? 'LAT (positions are mm above LAT)' : M.datum.replace(/^Datum: /,''));
+    put(ws,'+ axial direction',DS, M.kind==='elev' ? 'Upward' : (M.datum.split('+ axial')[1]||'').trim());
+    put(ws,'12 o\'clock reference used',DS, M.kind==='elev' ? 'Reference face per UT Setup [TBC]' : 'Top of member');
+    put(ws,'Required landing length',DS, R.land); put(ws,'Hole-edge reading offset',DS, R.edge);
+    put(ws,'Axial pitch — defect zone',DS, R.pitchD); put(ws,'Axial pitch — landing zone',DS, R.pitchL);
+    put(ws,'Defect centre elevation',DS, M.kind==='elev' ? +(+d.pos).toFixed(2) : null);
+    if(d.type==='dent') put(ws,'Dent dims',DS, `${d.ax} x ${d.cw} x ${d.depth||'?'}`);
+    if(d.type==='crack') put(ws,'Cracks in extent',DS, `${d.len} mm at ${d.ang||0}° to axis, centre ${fmtK(+d.clock)} o'clock`);
+    put(ws,'Start axial pos',DS, sheetPos(mk,r.zone[0])); put(ws,'End axial pos',DS, sheetPos(mk,r.zone[1]));
+    put(ws,'Start clock',DS, fmtK(r.kc-r.halfK)); put(ws,'End clock',DS, fmtK(r.kc+r.halfK));
+    put(ws,'Circ. extent measured',DS, Math.round(r.cw));
+    // grid rows by station id in column A
+    const rowOf = {}; ws.eachRow({includeEmpty:false},(row,rn)=>{ const t = cellText(row.getCell(1).value); if(/^(LA|LB|D)\d+$/.test(t) && !rowOf[t]) rowOf[t] = rn; });
+    const CLK = ['D','E','F','G','H','I','J','K','L','M','N','O'];
+    r.stations.forEach(x=>{ const rn = rowOf[x.id]; if(!rn) return;
+      ws.getCell('C'+rn).value = sheetPos(mk,x.s);
+      for(let k=0;k<12;k++){ const v = num(dVal(d,x.id,k)); if(v!==null) ws.getCell(CLK[k]+rn).value = v; }
+    });
+    if(d.type==='hole'){ const hr = (()=>{ let n=null; ws.eachRow({includeEmpty:false},(row,rn)=>{ if(!n && cellText(row.getCell(1).value)==='H1') n = rn; }); return n; })();
+      if(hr){ ws.getCell('B'+hr).value = sheetPos(mk,r.sc); ws.getCell('D'+hr).value = fmtK(r.kc); ws.getCell('E'+hr).value = num(d.ax); ws.getCell('G'+hr).value = num(d.cw);
+        [['K','+ax'],['L','−ax'],['M','CW'],['N','CCW']].forEach(([c,t])=>{ const v = num((d.edge||{})[t]); if(v!==null) ws.getCell(c+hr).value = v; });
+        if(d.note) ws.getCell('S'+hr).value = d.note; } }
+    if(d.type==='pitting'){ const pr = (()=>{ let n=null; ws.eachRow({includeEmpty:false},(row,rn)=>{ if(!n && cellText(row.getCell(1).value)==='P1') n = rn; }); return n; })();
+      if(pr){ ws.getCell('B'+pr).value = 'Defect centre'; ws.getCell('C'+pr).value = sheetPos(mk,r.sc); ws.getCell('D'+pr).value = fmtK(r.kc);
+        const dep = num((d.pit||{}).depth) ?? num(d.depth); if(dep!==null) ws.getCell('E'+pr).value = dep;
+        ws.getCell('G'+pr).value = num(d.dia); const rem = num((d.pit||{}).rem); if(rem!==null) ws.getCell('K'+pr).value = rem; if(d.note) ws.getCell('S'+pr).value = d.note; } }
+    if(d.type==='dent'){ const dm = d.dentm||{}; if(num(dm.od126)!==null) put(ws,"OD 12–6",DS,num(dm.od126)); if(num(dm.od39)!==null) put(ws,"OD 3–9",DS,num(dm.od39)); }
+    if(r.warn.length) put(ws,'Other observations',DS, r.warn.join(' '));
+  });
+  // Member Survey Section J: one row per defect
+  const jr = []; ms.eachRow({includeEmpty:false},(row,rn)=>{ if(/^DF\d\d$/.test(cellText(row.getCell(1).value))) jr.push(rn); });
+  list.forEach((d,i)=>{ const rn = jr[i]; if(!rn) return; const r = genDefect(mk,d);
+    if(M.kind==='elev') ms.getCell('B'+rn).value = +(+d.pos).toFixed(2); else ms.getCell('C'+rn).value = num(d.pos);
+    ms.getCell('D'+rn).value = fmtK(r.kc); ms.getCell('E'+rn).value = DTYPES[d.type].sheet;
+    const mins = r.stations.flatMap(x=>Object.values((d.rd||{})[x.id]||{})).map(num).filter(v=>v!==null); if(mins.length) ms.getCell('H'+rn).value = Math.min(...mins);
+    ms.getCell('J'+rn).value = d.type==='crack' ? `${d.len} mm crack` : `${Math.round(r.ax)} x ${Math.round(r.cw)}`;
+    ms.getCell('M'+rn).value = r.warn.some(w=>w.includes('node rules')) ? 'Node' : 'Straight';
+    ms.getCell('O'+rn).value = defId(i); if(d.note) ms.getCell('S'+rn).value = d.note;
+  });
+  return list.length;
+}
+// rebuild when the member or its extent changes
+const _setActive = setActive;
+setActive = function(mk, move){ if(mk!==UTS.active){ activeDef = null; closeForm(); closeDPop(); } _setActive(mk, move); renderDefects(); buildDefects(); };
+const _buildMember = buildMember;
+buildMember = function(...a){ _buildMember(...a); buildMemPick(); renderDefects(); buildDefects(); };
+buildMemPick(); renderDefects(); buildDefects();
+
+// ---------- ADDITIONAL INSPECTION POINTS — extra readings anywhere on the member, or a pre-filled point moved to suit site conditions
+const XCOL_NONE = 0xb0279f, XCOL_MOVED = 0x9aa6b8;
+const xlist = mk => (UTS[mk].extra = UTS[mk].extra || []);
+const xLabel = x => `AP${String(x.n).padStart(2,'0')}`;
+const xFind = (mk, n) => xlist(mk).find(x=>x.n===n);
+const ringId = (mk, key) => { const i = ringIndex(mk, key); return i<0 ? '?' : `R${String(i+1).padStart(2,'0')}`; };
+function nextXN(mk){ return xlist(mk).reduce((a,x)=>Math.max(a, x.n||0), 0) + 1; }
+function movedMap(mk){ const o = {}; xlist(mk).forEach(x=>{ if(x.from) o[jk(x.from.key,x.from.k)] = x; }); return o; }
+function xPosLabel(mk, x){ return posLabel(mk, sFromPos(mk, x.pos)); }
+function xFromLabel(mk, x){ return x.from ? `${ringId(mk, x.from.key)} ${KNAME(+x.from.k)} o'clock` : ''; }
+
+// ---- model
+const XG = new THREE.Group(); G.rings.add(XG);
+const XPICK = []; let xLabels = [];
+const xGeo = new THREE.OctahedronGeometry(0.026), xPickGeo = new THREE.SphereGeometry(0.045, 6, 5);
+const xPickMat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false});
+const xLineMat = new THREE.LineBasicMaterial({color:XCOL_MOVED});
+const xSel = new THREE.Mesh(new THREE.SphereGeometry(0.04,14,10), new THREE.MeshBasicMaterial({color:0xffd400, transparent:true, opacity:.85}));
+xSel.visible = false; G.rings.add(xSel);
+let xsel = null;   // {mk, n}
+function xPoint(mk, s, k, off){ const M = MEM[mk]; return clockPos(M.o.clone().addScaledVector(M.a, s), M.f, M.u, M.r + off, k); }
+function buildExtra(){
+  xLabels.forEach(untag); xLabels = [];
+  while(XG.children.length){ const c = XG.children[0]; XG.remove(c); if(c.material && c.material!==xLineMat && c.material!==xPickMat) c.material.dispose(); if(c.geometry && c.geometry!==xGeo && c.geometry!==xPickGeo) c.geometry.dispose(); }
+  XPICK.length = 0;
+  MKEYS.forEach(mk=>{
+    (UTS[mk].extra||[]).forEach(x=>{
+      const s = sFromPos(mk, x.pos); if(!isFinite(s)) return;
+      const p = xPoint(mk, s, +x.clock, 0.014), cls = readingClass(mk, x.val);
+      const m = new THREE.Mesh(xGeo, new THREE.MeshBasicMaterial({color: cls==='none' ? XCOL_NONE : PT_COL[cls]}));
+      m.position.copy(p); XG.add(m);
+      const pk = new THREE.Mesh(xPickGeo, xPickMat); pk.position.copy(p); pk.visible = false; pk.userData = {mk, n:x.n}; XG.add(pk); XPICK.push(pk);
+      if(x.from){ const R = ringsFor(mk).find(R=>R.key===x.from.key);
+        if(R){ const g = new THREE.BufferGeometry().setFromPoints([xPoint(mk, R.s, +x.from.k, 0.012), p]); XG.add(new THREE.Line(g, xLineMat)); } }
+      if(mk===UTS.active) xLabels.push(tag(xLabel(x), p.clone().add(new THREE.Vector3(0,0.06,0)), XG, '#b0279f', 'dim'));
+    });
+  });
+  MKEYS.forEach(markMoved);
+  if(xsel){ const x = xFind(xsel.mk, xsel.n); if(x){ xSel.position.copy(xPoint(xsel.mk, sFromPos(xsel.mk, x.pos), +x.clock, 0.014)); } }
+}
+function markMoved(mk){
+  const mv = movedMap(mk);
+  if(typeof SUB!=='undefined' && SUB[mk]){
+    Object.keys(mv).forEach(id=>{ const mesh = SUB[mk].userData.pts[id]; if(mesh){ mesh.material.color.setHex(XCOL_MOVED); mesh.scale.setScalar(0.7); } });
+  } else if(typeof PTS!=='undefined' && PTS){
+    Object.keys(mv).forEach(id=>{ const i = IDX[jk(mk,id)]; if(i!==undefined) PTS.setColorAt(i, _c.setHex(XCOL_MOVED)); });
+    if(PTS.instanceColor) PTS.instanceColor.needsUpdate = true;
+  }
+}
+const _recolourX = recolour;
+recolour = function(mk){ _recolourX(mk); markMoved(mk); };
+
+// ---- reading popover for an additional point
+const xpop = $('xpop'), xpVal = $('xp-val'), xpNote = $('xp-note'), xpHead = $('xp-head');
+function openXPop(mk, n){
+  const x = xFind(mk, n); if(!x) return;
+  xsel = {mk, n};
+  xpHead.textContent = `${UTS[mk].id||MEM[mk].name} · ${xLabel(x)} · ${xPosLabel(mk,x)} · ${KNAME(+x.clock)} o'clock${x.from ? ' · moved from '+xFromLabel(mk,x) : ''}`;
+  xpVal.value = x.val ?? ''; xpNote.value = x.note || '';
+  xSel.position.copy(xPoint(mk, sFromPos(mk, x.pos), +x.clock, 0.014)); xSel.visible = true;
+  xpop.hidden = false; xpVal.focus(); xpVal.select();
+}
+function closeXPop(){ xpop.hidden = true; xsel = null; xSel.visible = false; }
+function setXReading(mk, n, raw, note){
+  const v = String(raw).trim().replace(',', '.');
+  if(v!=='' && (isNaN(+v) || +v<0 || +v>200)){ toast(`"${raw}" is not a thickness in mm.`, true); return false; }
+  const x = xFind(mk, n); if(!x) return false;
+  if(v==='') delete x.val; else x.val = +v;
+  if(note!==undefined){ const t = note.trim(); if(t) x.note = t; else delete x.note; }
+  saveState(); return true;
+}
+function commitXPop(){ const u = xsel; if(!u) return true; if(!setXReading(u.mk, u.n, xpVal.value, xpNote.value)) return false; buildExtra(); renderExtra(); renderSummary(); return true; }
+[xpVal, xpNote].forEach(el=>el.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); if(commitXPop()) closeXPop(); }
+  if(e.key==='Escape') closeXPop();
+}));
+$('xp-save').addEventListener('click', ()=>{ if(commitXPop()) closeXPop(); });
+$('xp-close').addEventListener('click', closeXPop);
+const xtmp = new THREE.Vector3();
+function placeXPop(){
+  if(xpop.hidden || !xsel) return;
+  xtmp.copy(xSel.position).project(camera);
+  const w = view.clientWidth, h = view.clientHeight;
+  let x = (xtmp.x+1)/2*w + 16, y = (1-xtmp.y)/2*h - 20;
+  x = Math.min(Math.max(8, x), w - xpop.offsetWidth - 8); y = Math.min(Math.max(48, y), h - xpop.offsetHeight - 8);
+  xpop.style.left = x+'px'; xpop.style.top = y+'px';
+}
+const _placeDPopX = placeDPop;
+placeDPop = function(){ _placeDPopX(); placeXPop(); };
+
+// click an additional point in the model
+canvas.addEventListener('pointerup', e=>{
+  if(e.__handled || placing || !G.rings.visible || !XPICK.length) return;
+  if(!ddown || Math.hypot(e.clientX-ddown.x, e.clientY-ddown.y) > 5) return;
+  rayFrom(e);
+  const h = dray.intersectObjects(XPICK, false)[0];
+  if(h && h.distance <= initialHitDist() + 0.03){
+    e.__handled = true;
+    if(!pop.hidden){ try{ commitPop(); }catch(_){} select(null); }
+    closeDPop();
+    const u = h.object.userData;
+    if(u.mk!==UTS.active) setActive(u.mk, false);
+    openXPop(u.mk, u.n);
+  }
+}, true);
+
+// ---- panel: list + form
+let xEdit = null;   // n being edited, or null for new
+function stdOptions(mk, cur){
+  const mv = movedMap(mk), out = [h('option', {value:''}, '— none (extra reading) —')];
+  ringsFor(mk).forEach((R,i)=>KS.forEach(k=>{
+    const id = jk(R.key, k), x = mv[id], taken = x && (!cur || x.n!==cur);
+    if(!taken) out.push(h('option', {value:id}, `R${String(i+1).padStart(2,'0')} ${R.label} · ${KNAME(k)} o'clock`)); }));
+  return out;
+}
+function openXForm(n, preset){
+  const mk = UTS.active, x = n===null ? Object.assign({pos:'', clock:0, val:'', note:'', from:null}, preset||{}) : xFind(mk, n);
+  xEdit = n; closeXPop();
+  $('xp-form').hidden = false; $('xp-add').hidden = true;
+  $('xp-title').textContent = n===null ? (x.from ? `Move ${xFromLabel(mk,x)}` : 'New inspection point') : `Edit ${xLabel(x)}`;
+  $('xp-pos-l').firstChild.textContent = MEM[mk].kind==='elev' ? 'Elevation (m rel. LAT)' : 'Position from datum (mm)';
+  $('xp-pos').value = x.pos ?? ''; $('xp-clock').value = String(x.clock ?? 0);
+  $('xp-from').replaceChildren(...stdOptions(mk, n)); $('xp-from').value = x.from ? jk(x.from.key, x.from.k) : '';
+  $('xp-fval').value = x.val ?? ''; $('xp-fnote').value = x.note || '';
+}
+function closeXForm(){ $('xp-form').hidden = true; $('xp-add').hidden = false; xEdit = null; if(placing && placeMode==='point') setPlacing(false); }
+$('xp-add').addEventListener('click', ()=>openXForm(null));
+$('xp-cancel').addEventListener('click', closeXForm);
+$('xp-place').addEventListener('click', ()=>{ setPlacing(!(placing && placeMode==='point'), 'point'); if(placing) G.rings.visible = true; });
+function xPlaced(hit){
+  const {mk, s} = hit, k = Math.round(hit.k) % 12;
+  $('xp-pos').value = MEM[mk].kind==='elev' ? s.toFixed(2) : String(posFromS(mk, s));
+  $('xp-clock').value = String(k);
+  setPlacing(false); toast(`Point at ${posLabel(mk,s)}, ${KNAME(k)} o'clock — enter the reading if you have it, then save.`);
+}
+$('xp-fsave').addEventListener('click', ()=>{
+  const mk = UTS.active, pos = $('xp-pos').value.trim().replace(',', '.'), clock = +$('xp-clock').value, fromV = $('xp-from').value;
+  if(num(pos)===null){ toast('Enter the position, or use Pick on model.', true); return; }
+  const rawV = $('xp-fval').value.trim().replace(',', '.');
+  if(rawV!=='' && (isNaN(+rawV) || +rawV<0 || +rawV>200)){ toast(`"${rawV}" is not a thickness in mm.`, true); return; }
+  const from = fromV ? {key:fromV.split('|')[0], k:+fromV.split('|')[1]} : null;
+  const list = xlist(mk);
+  let x = xEdit===null ? {n: nextXN(mk)} : xFind(mk, xEdit);
+  const prevFrom = x.from ? x.from.key+'|'+x.from.k : '';
+  x.pos = pos; x.clock = clock;
+  if(rawV==='') delete x.val; else x.val = +rawV;
+  const note = $('xp-fnote').value.trim(); if(note) x.note = note; else delete x.note;
+  if(from){ x.from = from; } else delete x.from;
+  // a newly moved pre-filled point: its reading (if any) follows it to the new location
+  if(from && fromV!==prevFrom){
+    const ov = num((UTS[mk].readings[from.key]||{})[from.k]);
+    if(ov!==null){ if(x.val===undefined) x.val = ov; setReading(mk, from.key, from.k, ''); }
+  }
+  if(xEdit===null) list.push(x);
+  const s = sFromPos(mk, pos), [s0,s1] = memRange(mk);
+  saveState(); closeXForm(); renderTable(); renderSummary(); recolour(mk); buildExtra(); renderExtra();
+  toast(`${xLabel(x)} saved${from ? ` — ${xFromLabel(mk,x)} now reads at the new location` : ''}${(s < s0-0.001 || s > s1+0.001) ? ' (outside the survey extent)' : ''}.`);
+});
+let xDelArm = null;
+function renderExtra(){
+  const mk = UTS.active, list = xlist(mk).slice().sort((a,b)=>sFromPos(mk,a.pos)-sFromPos(mk,b.pos));
+  const rowsX = list.map(x=>h('tr', {'data-n':x.n}, h('th', {scope:'row'}, xLabel(x)), h('td', {class:'pos'}, xPosLabel(mk,x).replace(' mm','').replace(' m','')), h('td', null, KNAME(+x.clock)),
+    h('td', null, h('input', {class:'xrd', 'data-n':x.n, inputmode:'decimal', autocomplete:'off', value:x.val??'', 'data-c':readingClass(mk,x.val), 'aria-label':xLabel(x) + ' wall thickness'})),
+    h('td', {class:'xnote'}, x.from ? [h('b', null, 'moved from ' + xFromLabel(mk,x)), x.note ? ' · ' : null] : null, x.note || ''),
+    h('td', {class:'xact'}, h('button', {type:'button', class:'xedit', 'data-n':x.n}, 'Edit'), h('button', {type:'button', class:'xdel', 'data-n':x.n}, 'Delete'))));
+  $('xp-body').replaceChildren(...(rowsX.length ? rowsX : [h('tr', null, h('td', {colspan:6, class:'empty'}, "None. Use for extra readings, or to move a pre-filled point that can't be read where it is."))]));
+}
+$('xp-body').addEventListener('change', e=>{ const el = e.target; if(!el.classList.contains('xrd')) return;
+  if(!setXReading(UTS.active, +el.dataset.n, el.value)) el.value = '';
+  el.dataset.c = readingClass(UTS.active, el.value); buildExtra(); renderSummary(); });
+$('xp-body').addEventListener('keydown', e=>{ if(e.key!=='Enter' || !e.target.classList.contains('xrd')) return; e.preventDefault();
+  const ins = [...document.querySelectorAll('#xp-body input.xrd')], i = ins.indexOf(e.target);
+  e.target.dispatchEvent(new Event('change',{bubbles:true})); const nx = nth(ins, i+(e.shiftKey?-1:1)); if(nx){ nx.focus(); nx.select(); } });
+$('xp-body').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return; const n = +b.dataset.n, mk = UTS.active;
+  if(b.classList.contains('xedit')) openXForm(n);
+  if(b.classList.contains('xdel')){
+    if(xDelArm!==n){ xDelArm = n; b.textContent = 'Confirm'; b.classList.add('armed'); setTimeout(()=>{ if(xDelArm===n){ xDelArm=null; renderExtra(); } }, 3500); return; }
+    xDelArm = null; const list = xlist(mk), i = list.findIndex(x=>x.n===n), x = list[i];
+    // a deleted move: put the reading back on the pre-filled point if that point is still empty
+    if(x.from && num(x.val)!==null && num((UTS[mk].readings[x.from.key]||{})[x.from.k])===null) setReading(mk, x.from.key, x.from.k, String(x.val));
+    list.splice(i,1); if(xsel && xsel.n===n) closeXPop();
+    saveState(); renderTable(); renderSummary(); recolour(mk); buildExtra(); renderExtra(); toast(`${xLabel(x)} deleted.`);
+  }
+});
+
+// "Move point…" from the reading popover of a pre-filled point
+$('pop-move').addEventListener('click', ()=>{
+  const s = selected; if(!s) return;
+  if(!commitPop()) return;
+  const mk = s.mk, R = ringsFor(mk).find(R=>R.key===s.key); if(!R) return;
+  const mv = movedMap(mk)[jk(s.key,s.k)];
+  select(null); showTab('entry');
+  if(mv){ openXForm(mv.n); }
+  else openXForm(null, {pos: MEM[mk].kind==='elev' ? R.pos.toFixed(2) : String(R.pos), clock: s.k, from:{key:s.key, k:s.k}});
+  setPlacing(true, 'point'); G.rings.visible = true;
+  $('xp-sec').scrollIntoView({block:'nearest'});
+});
+
+// table + popover cues for moved pre-filled points
+const _renderTableX = renderTable;
+renderTable = function(){ _renderTableX(); const mv = movedMap(UTS.active);
+  document.querySelectorAll('#ut-body input.rd').forEach(inp=>{ const x = mv[jk(inp.dataset.key,inp.dataset.k)]; if(x){ inp.placeholder = '→'+xLabel(x); inp.classList.add('moved'); inp.title = `Moved to ${xLabel(x)} (${xPosLabel(UTS.active,x)}, ${KNAME(+x.clock)} o'clock)`; } }); };
+const _selectX = select;
+select = function(sel, openPop){ _selectX(sel, openPop); if(sel){ closeXPop(); } if(sel && openPop){ const x = movedMap(sel.mk)[jk(sel.key,sel.k)]; if(x) popHead.textContent += ` — moved to ${xLabel(x)}`; } };
+const _renderSummaryX = renderSummary;
+renderSummary = function(){ _renderSummaryX(); const L = xlist(UTS.active); if(L.length){ const got = L.filter(x=>num(x.val)!==null).length;
+  $('sum').append(' · ', h('b', null, String(got)), ` of ${L.length} additional`); } };
+
+// ---- export plan: additional points into the Member Survey ring grid
+function extraPlan(mk, list){
+  const tol = MEM[mk].kind==='elev' ? 0.025 : 25, rd = UTS[mk].readings, used = {}, plan = {inRing:[], moved:[], newRows:[]};
+  list.forEach((R,ri)=>KS.forEach(k=>{ if(num((rd[R.key]||{})[k])!==null) used[jk(ri,k)] = 1; }));
+  xlist(mk).forEach(x=>{ if(x.from){ const ri = list.findIndex(R=>R.key===x.from.key); if(ri>=0) plan.moved.push({ri, k:+x.from.k, x}); } });
+  xlist(mk).slice().sort((a,b)=>(+a.pos)-(+b.pos)).forEach(x=>{
+    const p = +x.pos, k = +x.clock, ri = list.findIndex(R=>Math.abs(R.pos - p) <= tol);
+    if(ri>=0 && !used[jk(ri,k)]){ used[jk(ri,k)] = 1; plan.inRing.push({ri, k, x}); return; }
+    let g = plan.newRows.find(g=>Math.abs(g.pos - p) <= tol && !g.items.some(y=>+y.clock===k));
+    if(!g){ g = {pos:p, items:[]}; plan.newRows.push(g); }
+    g.items.push(x);
+  });
+  plan.newRows.sort((a,b)=>a.pos-b.pos);
+  return plan;
+}
+
+// keep in step with member changes
+const _setActiveX = setActive;
+setActive = function(mk, move){ if(mk!==UTS.active){ closeXForm(); closeXPop(); } _setActiveX(mk, move); buildExtra(); renderExtra(); renderSummary(); };
+const _buildMemberX = buildMember;
+buildMember = function(...a){ _buildMemberX(...a); buildExtra(); };
+buildExtra(); renderExtra(); renderTable(); renderSummary();
+
+
+
+// ---------- layer control on the model (display layers are remembered per browser)
+(function(){
+  const btn = $('lay-btn'), popL = $('lay-pop'), KEY = STORE_KEY + '-layers';
+  let saved = {}; try{ saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }catch(e){}
+  const subs = [...popL.querySelectorAll('input[data-g]')];
+  subs.forEach(cb=>{ const k = cb.dataset.g; if(!G[k]){ cb.closest('label').hidden = true; return; }
+    if(k in saved) cb.checked = !!saved[k]; G[k].visible = cb.checked;
+    cb.addEventListener('change', ()=>{ G[k].visible = cb.checked; saved[k] = cb.checked; try{ localStorage.setItem(KEY, JSON.stringify(saved)); }catch(e){} }); });
+  btn.addEventListener('click', e=>{ e.stopPropagation(); const open = popL.hidden; popL.hidden = !open; btn.setAttribute('aria-expanded', String(open)); });
+  document.addEventListener('pointerdown', e=>{ if(!popL.hidden && !e.target.closest('.layer-ctl')){ popL.hidden = true; btn.setAttribute('aria-expanded','false'); } });
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape' && !popL.hidden){ popL.hidden = true; btn.setAttribute('aria-expanded','false'); } });
+  const setAll = on => popL.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(cb.closest('label').hidden || cb.checked===on) return; cb.checked = on; cb.dispatchEvent(new Event('change')); });
+  $('lay-all').addEventListener('click', ()=>setAll(true));
+  $('lay-min').addEventListener('click', ()=>{ setAll(false); ['L-context','L-rings','L-defx'].forEach(id=>{ const cb = $(id); if(!cb.checked){ cb.checked = true; cb.dispatchEvent(new Event('change')); } }); });
+})();
+
+// ---------- UNIQUE INSPECTION POINT IDs — written on the member for photo reference, shown in every entry box, listed in the ITP "Point Register" sheet
+// Format  <structure>/<member>/<ring position>/<clock>   e.g. N/1-35/1000/12 (brace, mm from datum) · S/Z1-S3/+1.50/03 (leg, m LAT)
+//         <structure>/<member>/AP01                        additional point
+//         <structure>/<member>/DS01/D3/04 · …/DS01/E+ax · …/DS01/PIT   defect station, hole / pit edge reading, pit
+// Ring IDs use the ring's position, not its R-number, so they don't change if the survey extent is edited.
+const PID_STRUCT = document.title.trim().startsWith('NSL') ? 'N' : 'S';
+const pidClock = k => String(+k===0 ? 12 : +k).padStart(2,'0');
+function pidRingTag(mk, key){ return MEM[mk].kind==='elev' ? ((+key>=0 ? '+' : '-') + Math.abs(+key).toFixed(2)) : String(Math.round(+key)); }
+function pidRing(mk, key, k){ return [PID_STRUCT, mk, pidRingTag(mk, key), pidClock(k)].join('/'); }
+function pidAP(mk, x){ return [PID_STRUCT, mk, xLabel(x)].join('/'); }
+function pidDef(mk, di, st, k){
+  const ds = defId(di).replace('-', '');
+  if(st==='pit') return [PID_STRUCT, mk, ds, 'PIT'].join('/');
+  if(String(st).startsWith('edge:')) return [PID_STRUCT, mk, ds, 'E' + st.slice(5).replace('−','-')].join('/');
+  return [PID_STRUCT, mk, ds, st, pidClock(k)].join('/');
+}
+
+// entry boxes: ID strip above the heading
+['pop','dpop','xpop'].forEach(id=>{ const p = $(id), el = h('div', {class:'pop-id', id:id+'-pid', title:'Write this ID on the member next to the reading'}); p.insertBefore(el, p.firstChild); });
+const _selectPid = select;
+select = function(sel, openPop){ _selectPid(sel, openPop); if(sel && openPop) $('pop-pid').textContent = pidRing(sel.mk, sel.key, sel.k); };
+const _openDPopPid = openDPop;
+openDPop = function(u){ _openDPopPid(u); $('dpop-pid').textContent = pidDef(u.mk, u.di, u.st, u.k); };
+const _openXPopPid = openXPop;
+openXPop = function(mk, n){ _openXPopPid(mk, n); const x = xFind(mk, n); if(x) $('xpop-pid').textContent = pidAP(mk, x); };
+
+// tables: hover shows the point ID
+const _renderTablePid = renderTable;
+renderTable = function(){ _renderTablePid(); const mk = UTS.active;
+  document.querySelectorAll('#ut-body input.rd').forEach(inp=>{ const id = pidRing(mk, inp.dataset.key, inp.dataset.k); inp.title = inp.title ? id + ' — ' + inp.title : id; }); };
+const _renderDefTablePid = renderDefTable;
+renderDefTable = function(){ _renderDefTablePid(); const mk = UTS.active; if(activeDef===null) return;
+  document.querySelectorAll('#df-body input.drd').forEach(inp=>{ inp.title = pidDef(mk, activeDef, inp.dataset.st, inp.dataset.k); });
+  document.querySelectorAll('#df-extra input.dex').forEach(inp=>{ const k = inp.dataset.k; if(k==='pit' || k.startsWith('edge:')) inp.title = pidDef(mk, activeDef, k, 0); }); };
+const _renderExtraPid = renderExtra;
+renderExtra = function(){ _renderExtraPid(); const mk = UTS.active;
+  document.querySelectorAll('#xp-body tr[data-n]').forEach(tr=>{ const x = xFind(mk, +tr.dataset.n); if(x) tr.title = pidAP(mk, x); }); };
+
+// every inspection point for a member, in survey order
+function pointRegister(mk){
+  const m = UTS[mk], M = MEM[mk], rows = [], mv = movedMap(mk), elev = M.kind==='elev';
+  const posTxt = s => posLabel(mk, s);
+  const cls = v => { const c = readingClass(mk, v); return c==='low' ? 'Below FFS' : c==='high' ? 'Over nominal +10% — verify' : c==='ok' ? 'OK' : ''; };
+  ringsFor(mk).forEach((R,i)=>KS.forEach(k=>{
+    const x = mv[jk(R.key, k)], v = num((m.readings[R.key]||{})[k]);
+    rows.push([pidRing(mk, R.key, k), 'Initial ring', 'R' + String(i+1).padStart(2,'0'), R.label, pidClock(k), v, cls(v),
+      [x ? `Moved to ${xLabel(x)}` : '', (m.remarks||{})[R.key] || ''].filter(Boolean).join(' — ')]);
+  }));
+  (m.extra||[]).slice().sort((a,b)=>sFromPos(mk,a.pos)-sFromPos(mk,b.pos)).forEach(x=>{ const v = num(x.val);
+    rows.push([pidAP(mk, x), 'Additional point', xLabel(x), xPosLabel(mk, x), pidClock(x.clock), v, cls(v), [x.from ? 'Moved from ' + xFromLabel(mk, x) : '', x.note || ''].filter(Boolean).join(' — ')]); });
+  (m.defects||[]).forEach((d,di)=>{
+    const r = genDefect(mk, d), lab = `${defId(di)} ${DTYPES[d.type].label}`;
+    r.stations.forEach(st=>{ for(let k=0;k<12;k++){ const v = num(dVal(d, st.id, k)); rows.push([pidDef(mk, di, st.id, k), lab + ' — ' + (st.zone==='Defect' ? 'defect zone' : 'landing'), st.id, posTxt(st.s), pidClock(k), v, cls(v), '']); } });
+    if(r.extras.edges) ['+ax','−ax','CW','CCW'].forEach(t=>{ const v = num((d.edge||{})[t]); rows.push([pidDef(mk, di, 'edge:'+t, 0), lab + ' — hole edge', 'Edge ' + t, '', '', v, cls(v), '']); });
+    if(r.extras.pit){ const v = num((d.pit||{}).rem); rows.push([pidDef(mk, di, 'pit', 0), lab + ' — pit centre', 'Pit', posTxt(r.extras.pit.s), fmtK(r.extras.pit.k), v, cls(v), (d.pit||{}).depth!=null ? `Pit depth ${d.pit.depth} mm (gauge)` : '']);
+      ['+ax','−ax','CW','CCW'].forEach(t=>{ const v2 = num((d.edge||{})[t]); rows.push([pidDef(mk, di, 'edge:'+t, 0), lab + ' — around pit', 'Edge ' + t, '', '', v2, cls(v2), '']); }); }
+  });
+  return rows;
+}
+// ITP workbook: (re)build the "Point Register" sheet
+function writePointRegister(wb, mk){
+  const old = wb.getWorksheet('Point Register'); if(old) wb.removeWorksheet(old.id);
+  const ws = wb.addWorksheet('Point Register', {views:[{state:'frozen', ySplit:4}], pageSetup:{orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:0, paperSize:9}});
+  const M = MEM[mk], m = UTS[mk];
+  ws.columns = [{width:30},{width:30},{width:10},{width:16},{width:8},{width:11},{width:22},{width:44}];
+  ws.getCell('A1').value = 'INSPECTION POINT REGISTER'; ws.getCell('A1').font = {bold:true, size:13, color:{argb:'FF002060'}};
+  ws.getCell('A2').value = `${m.id || M.name} · ${M.name} · tool member ${mk}`; ws.getCell('A2').font = {size:10};
+  ws.getCell('A3').value = 'Point ID format: structure / member / ring position (mm from datum, or m LAT for legs and piles) / clock. Write the ID on the member next to each reading so photos can be referenced.';
+  ws.getCell('A3').font = {italic:true, size:9, color:{argb:'FF5A6780'}};
+  const hdr = ws.getRow(4); hdr.values = ['Point ID','Type','Ring / station', M.kind==='elev' ? 'Elevation' : 'Position','Clock','WT (mm)','Status','Remarks'];
+  hdr.eachCell(c=>{ c.font = {bold:true, color:{argb:'FFFFFFFF'}}; c.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF002060'}}; c.alignment = {vertical:'middle'}; });
+  pointRegister(mk).forEach((r,i)=>{ const row = ws.getRow(5+i); row.values = r; row.getCell(1).font = {name:'Consolas', bold:true};
+    if(r[6]==='Below FFS') row.getCell(6).fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF6C9C9'}}; });
+  ws.autoFilter = {from:'A4', to:'H4'};
+  return ws;
+}
+
+// ---------- PERSISTENCE: Supabase (live shared data, sign-in, roles) with localStorage as the offline / unconfigured fallback
+// Table public.members holds one row per (structure, member_key) → data (that member's readings, defects, points); member_key '__common__' holds
+// the shared inspection details. Roles come from the database (my_role): @franmarine.com.au = editor; other addresses must be on the access list
+// (viewer by default, can be promoted to editor in the Access tab by Franmarine staff).
+const persistence = (function(){
+  const CFG = window.F12221_CONFIG || {}, STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', COMMON = '__common__';
+  const P = { mode:'local', online:navigator.onLine !== false, role:null, staff:false, email:'', client:null,
+              base:{}, ver:{}, pending:new Set(), saving:false, applyingRemote:false, chan:null };
+  const js = o => JSON.stringify(o);
+  function canon(v){
+    if(Array.isArray(v)) return v.map(canon);
+    if(v && typeof v==='object'){ const o = {}; Object.keys(v).sort().forEach(k=>{ const c = canon(v[k]);
+      if(c==='' || c===undefined || c===null || (Array.isArray(c) && !c.length) || (c && typeof c==='object' && !Array.isArray(c) && !Object.keys(c).length)) return; o[k] = c; }); return o; }
+    return v;
+  }
+  const same = (a,b) => js(canon(a))===js(canon(b));
+  function merge3(base, mine, theirs){
+    if(same(mine, base)) return theirs;
+    if(same(theirs, base)) return mine;
+    const obj = v => v && typeof v==='object' && !Array.isArray(v);
+    if(obj(mine) && obj(theirs)){ const out = {}, b = obj(base) ? base : {};
+      new Set([...Object.keys(mine), ...Object.keys(theirs)]).forEach(k=>{ const m = merge3(b[k], mine[k], theirs[k]); if(m!==undefined) out[k] = m; }); return out; }
+    return mine;   // both changed the same field: the user's own edit wins
+  }
+  const cur = k => k===COMMON ? UTS.common : UTS[k];
+
+  // ---- UI: pill, banner, sign-in gate, access tab
+  function pill(){
+    const el = $('ah-pill'); if(!el) return;
+    const st = P.mode!=='shared' ? ['local','Local only'] : !P.online ? ['off','Offline — reconnecting'] : ['live', P.role==='editor' ? 'Live · Editor' : 'Live · View only'];
+    el.dataset.s = st[0]; el.textContent = st[1]; el.title = P.email ? 'Signed in as ' + P.email : '';
+    const b = $('ah-banner');
+    if(b && !b.dataset.err){
+      b.replaceChildren();
+      if(P.mode==='shared'){
+        b.append(P.role==='editor' ? 'Shared live with the team. ' : 'View only — ask a Franmarine team member if you need to edit. ', 'Signed in as ', h('b', null, P.email), ' · ');
+        const so = h('button', {type:'button', class:'linkbtn'}, 'Sign out'); so.addEventListener('click', signOut); b.append(so);
+      } else b.append('Your data is saved in this browser only. Use Save backup to keep a copy.');
+    }
+    document.querySelectorAll('.ah-local-note').forEach(n=>{ n.hidden = P.mode==='shared'; });
+    document.body.classList.toggle('viewer', P.mode==='shared' && P.role!=='editor');
+    const at = document.querySelector('.tabs button[data-tab="access"]'); if(at) at.hidden = !(P.mode==='shared' && P.staff);
+  }
+  let errT = null;
+  function fail(msg){
+    const b = $('ah-banner'); if(!b) return;
+    b.dataset.err = '1'; b.textContent = msg; b.classList.add('err');
+    clearTimeout(errT); errT = setTimeout(()=>{ delete b.dataset.err; b.classList.remove('err'); pill(); }, 9000);
+  }
+  let refreshDeferred = false;
+  function refreshUI(){
+    const ae = document.activeElement;
+    if(ae && ae.matches && ae.matches('input, select, textarea') && ae.closest('aside, .pop')){
+      if(!refreshDeferred){ refreshDeferred = true; ae.addEventListener('blur', ()=>{ refreshDeferred = false; setTimeout(refreshUI, 0); }, {once:true}); }
+      return;
+    }
+    try{ buildMember(); setActive(MKEYS.includes(UTS.active) ? UTS.active : MKEYS[0], false); }catch(e){}
+  }
+  function askConfirm(msg, okText){
+    return new Promise(res=>{
+      const d = $('ah-confirm'); $('ah-confirm-msg').textContent = msg; $('ah-ok').textContent = okText || 'Continue';
+      d.hidden = false; $('ah-ok').focus();
+      const done = v => { d.hidden = true; $('ah-ok').onclick = $('ah-cancel').onclick = null; res(v); };
+      $('ah-ok').onclick = ()=>done(true); $('ah-cancel').onclick = ()=>done(false);
+    });
+  }
+  function gate(state, extra){
+    const g = $('sg'); if(!g) return;
+    g.hidden = state==='none';
+    ['sg-form','sg-sent','sg-denied','sg-wait'].forEach(id=>{ $(id).hidden = true; });
+    if(state==='form') $('sg-form').hidden = false;
+    if(state==='sent'){ $('sg-sent').hidden = false; $('sg-sent-to').textContent = extra || ''; }
+    if(state==='denied'){ $('sg-denied').hidden = false; $('sg-denied-as').textContent = extra || ''; }
+    if(state==='wait') $('sg-wait').hidden = false;
+  }
+
+  // ---- read-only for viewers
+  function lockInputs(){
+    if(!document.body.classList.contains('viewer')) return;
+    document.querySelectorAll('aside #tab-entry input, aside #tab-entry select, .pop input').forEach(el=>{
+      if(el.id==='mem-sel' || el.type==='file') return;
+      if(el.tagName==='SELECT') el.disabled = true; else el.readOnly = true; });
+  }
+  new MutationObserver(()=>lockInputs()).observe(document.body, {subtree:true, childList:true});
+  const guard = fn => function(...a){ if(document.body.classList.contains('viewer')){ toast('View only — you do not have edit access.', true); return false; } return fn.apply(this, a); };
+  setReading = guard(setReading); setDReading = guard(setDReading); setXReading = guard(setXReading);
+
+  // ---- data: load, save, live updates
+  async function loadAll(){
+    const {data, error} = await P.client.from('members').select('member_key,data,version').eq('structure', STRUCT);
+    if(error){ fail('Could not load the team data: ' + error.message); return false; }
+    const d = {active:UTS.active, common:{}};
+    P.base = {}; P.ver = {};
+    (data||[]).forEach(r=>{ P.base[r.member_key] = r.data; P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = r.data; else d[r.member_key] = r.data; });
+    P.applyingRemote = true;
+    try{ UTS = mergeState(d); try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} refreshUI(); }
+    finally{ P.applyingRemote = false; }
+    return (data||[]).length;
+  }
+  function changedKeys(){
+    const out = [];
+    [COMMON, ...MKEYS].forEach(k=>{ const v = cur(k); if(!v) return;
+      const b = P.base[k];
+      if(b===undefined ? !same(v, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(v, b)) out.push(k); });
+    return out;
+  }
+  let debT = null;
+  function schedule(delay){ if(P.mode!=='shared' || P.role!=='editor' || P.applyingRemote) return; clearTimeout(debT); debT = setTimeout(flush, delay); }
+  async function flush(){
+    clearTimeout(debT);
+    if(P.mode!=='shared' || P.role!=='editor') return;
+    if(P.saving){ setTimeout(flush, 300); return; }
+    if(!P.online){ fail('Offline — your changes are kept in this browser and will be sent when the connection returns.'); return; }
+    const keys = changedKeys(); if(!keys.length) return;
+    P.saving = true;
+    try{ for(const k of keys) await saveOne(k); }
+    finally{ P.saving = false; }
+  }
+  async function saveOne(k, attempt){
+    const mine = JSON.parse(js(cur(k)));
+    let res;
+    if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:STRUCT, member_key:k, data:mine}).select('version');
+    else res = await P.client.from('members').update({data:mine}).eq('structure', STRUCT).eq('member_key', k).eq('version', P.ver[k]).select('version');
+    const ok = !res.error && res.data && res.data.length;
+    if(ok){ P.base[k] = mine; P.ver[k] = res.data[0].version; return true; }
+    if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k) + ': ' + res.error.message); return false; }
+    // someone else saved this member first: merge the fields this user changed over theirs and try once more
+    const g = await P.client.from('members').select('data,version').eq('structure', STRUCT).eq('member_key', k).maybeSingle();
+    if(g.error || !g.data){ fail('Could not re-read ' + k + ' after a clash: ' + ((g.error && g.error.message) || 'not found')); return false; }
+    const merged = merge3(P.base[k] || {}, mine, g.data.data);
+    P.base[k] = g.data.data; P.ver[k] = g.data.version;
+    applyMember(k, merged);
+    if(attempt) { applyMember(k, g.data.data); toast('A teammate saved ' + k + ' at the same moment — their version was kept. Check your last entry.', true); return false; }
+    return saveOne(k, true);
+  }
+  function applyMember(k, data){
+    P.applyingRemote = true;
+    try{
+      if(k===COMMON) UTS.common = Object.assign({}, DEFAULTS.common, data);
+      else if(MKEYS.includes(k)){ const st = mergeState({active:UTS.active, common:UTS.common, [k]:data}); UTS[k] = st[k]; }
+      try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){}
+    } finally { P.applyingRemote = false; }
+  }
+  function onRemote(row){
+    if(!row || row.structure!==STRUCT) return;
+    const k = row.member_key; if(P.ver[k]!==undefined && row.version <= P.ver[k]) return;
+    const mine = cur(k), base = P.base[k];
+    const dirty = mine && (base===undefined ? !same(mine, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(mine, base));
+    P.base[k] = row.data; P.ver[k] = row.version;
+    applyMember(k, dirty ? merge3(base || {}, mine, row.data) : row.data);
+    if(dirty) schedule(400);
+    refreshUI();
+  }
+  function subscribe(){
+    if(P.chan) P.client.removeChannel(P.chan);
+    P.chan = P.client.channel('members-' + STRUCT)
+      .on('postgres_changes', {event:'*', schema:'public', table:'members', filter:'structure=eq.' + STRUCT}, p=>onRemote(p.new))
+      .subscribe(status=>{
+        if(status==='SUBSCRIBED'){ if(!P.online){ P.online = true; pill(); loadAll().then(()=>flush()); } }
+        else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){ P.online = false; pill(); }
+      });
+  }
+
+  // ---- access list (Franmarine staff only)
+  async function renderAccess(){
+    const body = $('acc-body'); if(!body || !P.staff) return;
+    const {data, error} = await P.client.from('access_list').select('email,role,note,added_by,added_at').order('email');
+    if(error){ body.replaceChildren(h('tr', null, h('td', {colspan:4, class:'empty'}, 'Could not load the access list: ' + error.message))); return; }
+    body.replaceChildren(...(data||[]).map(r=>{
+      const sel = h('select', {'data-email':r.email, class:'acc-role', 'aria-label':'Role for ' + r.email}, h('option', {value:'viewer', selected:r.role==='viewer'}, 'Viewer'), h('option', {value:'editor', selected:r.role==='editor'}, 'Editor'));
+      const del = h('button', {type:'button', class:'acc-del', 'data-email':r.email}, 'Remove');
+      return h('tr', null, h('td', {class:'acc-email'}, r.email, r.note ? h('span', {class:'acc-note'}, r.note) : null), h('td', null, sel), h('td', {class:'acc-by'}, (r.added_by||'').split('@')[0]), h('td', null, del));
+    }));
+    if(!(data||[]).length) body.replaceChildren(h('tr', null, h('td', {colspan:4, class:'empty'}, 'No external users yet.')));
+  }
+  async function accessChange(e){
+    const el = e.target;
+    if(el.classList.contains('acc-role')){
+      const {error} = await P.client.from('access_list').update({role:el.value}).eq('email', el.dataset.email);
+      toast(error ? 'Could not change the role: ' + error.message : `${el.dataset.email} is now ${el.value==='editor' ? 'an Editor' : 'a Viewer'}.`, !!error);
+    }
+  }
+  let accDelArm = null;
+  async function accessClick(e){
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.classList.contains('acc-del')){
+      const em = b.dataset.email;
+      if(accDelArm!==em){ accDelArm = em; b.textContent = 'Confirm'; b.classList.add('armed'); setTimeout(()=>{ if(accDelArm===em){ accDelArm = null; renderAccess(); } }, 3500); return; }
+      accDelArm = null;
+      const {error} = await P.client.from('access_list').delete().eq('email', em);
+      toast(error ? 'Could not remove: ' + error.message : em + ' removed.', !!error); renderAccess();
+    }
+  }
+  async function accessAdd(){
+    const em = $('acc-email').value.trim().toLowerCase(), role = $('acc-new-role').value, note = $('acc-note').value.trim();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ toast('Enter a valid email address.', true); return; }
+    if(em.endsWith('@' + (CFG.STAFF_DOMAIN || 'franmarine.com.au'))){ toast('Franmarine addresses are Editors automatically — no need to add them.', true); return; }
+    const {error} = await P.client.from('access_list').upsert({email:em, role, note:note || null});
+    if(error){ toast('Could not add: ' + error.message, true); return; }
+    $('acc-email').value = ''; $('acc-note').value = '';
+    toast(`${em} added as ${role==='editor' ? 'an Editor' : 'a Viewer'}. They can now sign in with that address.`); renderAccess();
+  }
+
+  // ---- sign-in
+  async function signOut(){ try{ await P.client.auth.signOut(); }catch(e){} location.reload(); }
+  async function startSession(session){
+    P.email = (session.user && session.user.email || '').toLowerCase();
+    gate('wait');
+    const r = await P.client.rpc('my_role');
+    if(r.error){ gate('none'); fail('Could not check your access: ' + r.error.message); return; }
+    if(!r.data){ gate('denied', P.email); return; }
+    P.role = r.data; P.staff = P.email.endsWith('@' + (CFG.STAFF_DOMAIN || 'franmarine.com.au'));
+    P.mode = 'shared'; gate('none'); pill(); lockInputs();
+    const n = await loadAll();
+    if(n===0 && P.role==='editor'){
+      const local = changedKeys().filter(k=>k!==COMMON);
+      if(local.length && await askConfirm(`The team copy of the ${STRUCT} Inspection ITP is empty, but this browser holds data for ${local.length} member(s). Upload it to share with the team?`, 'Upload')) await flush();
+    }
+    subscribe(); renderAccess();
+  }
+  async function init(){
+    pill();
+    if(!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY) || typeof window.supabase==='undefined' || !window.supabase.createClient){ gate('none'); return; }
+    try{ P.client = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:true, detectSessionInUrl:true, flowType:'implicit'}}); }
+    catch(e){ fail('Could not start the team connection: ' + e.message); return; }
+    $('sg-send').addEventListener('click', async ()=>{
+      const em = $('sg-email').value.trim().toLowerCase();
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ $('sg-msg').textContent = 'Enter your email address.'; return; }
+      $('sg-send').disabled = true; $('sg-msg').textContent = '';
+      const {error} = await P.client.auth.signInWithOtp({email:em, options:{emailRedirectTo: location.href.split('#')[0]}});
+      $('sg-send').disabled = false;
+      if(error) $('sg-msg').textContent = 'Could not send the link: ' + error.message; else gate('sent', em);
+    });
+    $('sg-email').addEventListener('keydown', e=>{ if(e.key==='Enter') $('sg-send').click(); });
+    $('sg-local').addEventListener('click', ()=>{ gate('none'); pill(); });
+    $('sg-retry').addEventListener('click', ()=>gate('form'));
+    $('sg-out').addEventListener('click', signOut);
+    let started = false;
+    P.client.auth.onAuthStateChange((ev, session)=>{ if(session && !started){ started = true; startSession(session); } });
+    const {data} = await P.client.auth.getSession();
+    if(data && data.session){ if(!started){ started = true; startSession(data.session); } }
+    else gate('form');
+    window.addEventListener('offline', ()=>{ P.online = false; pill(); });
+    window.addEventListener('online', ()=>{ P.online = true; pill(); if(P.mode==='shared'){ loadAll().then(()=>flush()); } });
+    $('acc-add').addEventListener('click', accessAdd);
+    $('acc-body').addEventListener('change', accessChange);
+    $('acc-body').addEventListener('click', accessClick);
+  }
+
+  // ---- hooks into the page
+  const _saveStateLocal = saveState;   // localStorage stays as the offline copy
+  saveState = function(){ _saveStateLocal(); if(P.mode==='shared' && !P.applyingRemote) schedule(400); };
+  document.addEventListener('click', e=>{ const b = e.target.closest && e.target.closest('button'); if(b && P.mode==='shared') setTimeout(flush, 0); });
+  document.addEventListener('change', e=>{ if(P.mode==='shared' && e.target.matches && e.target.matches('select, input[type=checkbox], input[type=date]')) setTimeout(flush, 0); });
+
+  return {
+    get mode(){ return P.mode; }, get role(){ return P.role; },
+    init, flush, askConfirm,
+    async replaceShared(){ if(P.role!=='editor') return false; Object.keys(P.ver).forEach(k=>{ P.base[k] = {__replace:true}; }); await flush(); return true; },
+  };
+})();
+persistence.init();
+
+
+// ---------- sizing / render loop
+function resize(){
+  const w=view.clientWidth, h=view.clientHeight; if(!w||!h) return;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view);
+const tmp = new THREE.Vector3();
+function updateLabels(){
+  const w=view.clientWidth, h=view.clientHeight;
+  const far = camera.position.distanceTo(controls.target) > 5;
+  for(const L of labels){
+    let vis=!(L.minor && far) && !(L.farOnly && !far), p=L.o; while(vis && p){ if(!p.visible){vis=false;break;} p=p.parent; }
+    if(vis){ L.o.getWorldPosition(tmp); tmp.project(camera); vis = tmp.z<1 && Math.abs(tmp.x)<1.2 && Math.abs(tmp.y)<1.2; }
+    if(!vis){ if(L.el.style.display!=='none') L.el.style.display='none'; continue; }
+    L.el.style.display='';
+    L.el.style.left=((tmp.x+1)/2*w).toFixed(1)+'px';
+    L.el.style.top=((1-tmp.y)/2*h).toFixed(1)+'px';
+  }
+}
+function frame(now){
+  if(tween){
+    const t=Math.min(1,(now-tween.start)/tween.dur), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    camera.position.lerpVectors(tween.p0,tween.p1,e); controls.target.lerpVectors(tween.t0,tween.t1,e);
+    if(t>=1) tween=null;
+  }
+  controls.update();
+  renderer.render(scene,camera);
+  updateLabels();
+  placePop();
+  placeDPop();
+  requestAnimationFrame(frame);
+}
+resize();
+const start = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : 'initial';
+const sv = VIEWS[start]; camera.position.set(...sv.pos); controls.target.set(...sv.tgt); controls.update();
+go(start); tween=null; camera.position.set(...sv.pos); controls.target.set(...sv.tgt);
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
