@@ -47,6 +47,9 @@ Free to set up and trial. Free Supabase projects pause after 7 days without use,
 - `Load backup` while signed in as an Editor replaces the team's copy (after a confirmation).
 
 ## Change log
+- **2026-10-29** — Access jetty added to both models as a visual reference (Layers → Access jetty): SSL per 63X30Z/M61, NSL per 76-X30E/M33A. Not inspected.
+- **2026-10-29** — Member ID fills in automatically as structure + member (e.g. SSL-NW-21, NSL-P29-S2); it is the ITP document number. Editable; clearing it restores the default.
+- **2026-10-29** — Compass marks moved above the structure; labels are hidden while a member is between them and the viewer.
 - **2026-10-29** — Layers → Member IDs: shows each member's ID on the model (nearest labels only, more appear as you zoom in).
 - **2026-10-29 (pm)** — SSL rebuilt from the engineer's model (SSL_Substructure DWG): 600 members — towers NW/NE/SW-01 … -104 and SE-01 … -80 (no base frame under SE), tie bracing TN/TE/TS/TW-01 … -52 (outer frame, inner frame, plan bracing). Member sizes from the model shown as OD / WT hints. Member IDs issued earlier on 29 Oct do not carry over.
 - **2026-10-29** — SSL member IDs renumbered: tower + number from the top down (NW-01 … NW-88), the same number for the same position on every tower; inter-tower bracing by elevation (TN, TE, TS, TW -01 … -14). Previous IDs in saved data, backups and scope lists convert automatically. SSL bracing corrected to one diagonal per bay with tie bracing on the outside elevations (28 Oct).

@@ -306,6 +306,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <div class="lh">Structure</div>
         <label><input type="checkbox" id="L-context" checked> Structure</label>
         <label><input type="checkbox" data-g="mid"> Member IDs</label>
+        <label><input type="checkbox" data-g="jetty" checked> Access jetty</label>
         <label><input type="checkbox" data-g="deck" checked> Deck, girder, pile caps and seabed</label>
         <div class="lh">Reference</div>
         <label><input type="checkbox" data-g="orient" checked> Orientation, grid and pile numbers</label>
@@ -459,7 +460,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <h2>Workflow</h2>
         <ol class="steps">
           <li><b>Select the member.</b> Click any blue UT point on it, or choose it in the member list on the UT data entry tab. One member = one ITP workbook.</li>
-          <li><b>Set it up.</b> Enter the Member ID, OD, WT and fit-for-service limit, then the measured length (braces) or inspect-from / to elevations (legs and piles). The rings regenerate to suit.</li>
+          <li><b>Set it up.</b> The Member ID fills itself in (structure + member, e.g. NSL-P29-S2) and becomes the ITP document number — change it only if the client requires their own number; clear it to restore. Enter the OD, WT and fit-for-service limit, then the measured length (braces) or inspect-from / to elevations (legs and piles). The rings regenerate to suit.</li>
           <li><b>Initial inspection.</b> Full-length CVI, then UT at 12, 3, 6 and 9 o'clock on every ring (template 1). Red = below the fit-for-service limit.</li>
           <li><b>Record each defect</b> found in the CVI or flagged by a red reading. The tool lays out the detail grid around it (template 3), or the node grid if it's near a member end (template 4).</li>
           <li><b>Take the defect readings.</b> Click points in the model or type in the defect table.</li>
@@ -943,8 +944,10 @@ tag('SOW 4.2: HAT + 2 m', V(SX-0.05,ST,SZ), G.zbar, '#002060', 'l');
 [['H1 top horizontal (RL 32.53 ft)',LVL.H1],['H2 (RL 18.74 ft)',LVL.H2],['Upper splice (RL 15.45 ft)',SPL.U],['H3 (RL 4.95 ft)',LVL.H3],['H4 bottom horizontal (RL −8.84 ft)',LVL.H4],['Lower splice (RL −9.68 ft)',SPL.L]]
   .forEach(([t,y])=>tag(`${t}  ${y>=0?'+':'−'}${Math.abs(y).toFixed(2)} m [TBC]`, V(HALF+0.5, y, HALF+0.3), G.lvl, '#7a6a48', 'r dim'));
 // compass: north = −z, east = +x
-[['N',V(0,0,-HALF-2.6)],['S',V(0,0,HALF+2.6)],['W',V(-HALF-2.6,0,0)],['E',V(HALF+2.6,0,0)]].forEach(([t,p])=>tag(t, p, G.orient, '#002060', 'big'));
-arrow(V(0,0.02,-HALF-1.2), V(0,0,-1), 1.0, 0x002060, G.orient, 0.25);
+// compass above the top of the structure (clear of the deck)
+const CY = DECK + 1.6;
+[['N',V(0,CY,-HALF-2.0)],['S',V(0,CY,HALF+2.0)],['W',V(-HALF-2.0,CY,0)],['E',V(HALF+2.0,CY,0)]].forEach(([t,p])=>tag(t, p, G.orient, '#002060', 'big'));
+arrow(V(0,CY-0.35,-HALF-0.6), V(0,0,-1), 1.0, 0x002060, G.orient, 0.25);
 
 // ---------- INITIAL INSPECTION: full-length CVI + UT rings every 500 mm, 4 points (12 / 3 / 6 / 9) — data entry (instanced)
 const IC = 0x0b5cad, ICs = '#0b5cad';
@@ -954,9 +957,13 @@ const KNAME = k => k===0 ? '12' : String(k);
 const cviAct = new THREE.MeshBasicMaterial({color:0x2f8cff, transparent:true, opacity:.28, side:THREE.DoubleSide, depthWrite:false});
 
 const DEFAULTS = { active:'P29-S2', common:{date:'', operator:'', cert:'', equip:'', hat:1.4} };
+// Member ID (ITP document number F12221-ITP-002-<id>): filled automatically as structure + tool ID, e.g. NSL-P29-S2; editable, and clearing it restores the default
+const autoId = k => `NSL-${k}`;
+const shortName = k => MEM[k].name.startsWith(k + ' — ') ? MEM[k].name.slice(k.length + 3) : MEM[k].name;
+const idLabel = k => { const id = (UTS[k] && UTS[k].id) || autoId(k); return id===autoId(k) ? id : `${id} (${k})`; };
 MKEYS.forEach(k=>{ const M = MEM[k];
-  DEFAULTS[k] = M.kind==='elev' ? {id:'', structure:'NSL', od:'', wt:'', ffs:'', bottom:+M.p0.y.toFixed(2), top:+M.p1.y.toFixed(2), readings:{}, remarks:{}}
-                                : {id:'', structure:'NSL', od:'', wt:'', ffs:'', length:M.len, readings:{}, remarks:{}};
+  DEFAULTS[k] = M.kind==='elev' ? {id:autoId(k), structure:'NSL', od:'', wt:'', ffs:'', bottom:+M.p0.y.toFixed(2), top:+M.p1.y.toFixed(2), readings:{}, remarks:{}}
+                                : {id:autoId(k), structure:'NSL', od:'', wt:'', ffs:'', length:M.len, readings:{}, remarks:{}};
 });
 const STORE_KEY = 'nsl-itp002-ut-v3', BACKUP_FMT = 'nsl-itp002-ut';
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -989,7 +996,7 @@ function mergeState(d){
     Object.assign(st.common, d.common||{});
     MKEYS.forEach(k=>{ if(d[k]) { Object.assign(st[k], d[k]); st[k].readings = d[k].readings||{}; st[k].remarks = d[k].remarks||{}; } });
   }
-  MKEYS.forEach(k=>{ if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
+  MKEYS.forEach(k=>{ if(!String(st[k].id||'').trim()) st[k].id = autoId(k); if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
   return st;
 }
 let UTS = loadState();
@@ -1151,7 +1158,7 @@ function memberProgress(mk){
 function renderMemberSelect(){
   const sel = $('mem-sel');
   sel.replaceChildren(...GROUPS.map(g=>h('optgroup', {label:g}, MKEYS.filter(k=>MEM[k].group===g).map(k=>{ const [n,t] = memberProgress(k); const id = UTS[k].id;
-    return h('option', {value:k, selected:k===UTS.active}, `${MEM[k].name}${id?' · '+id:''}  (${n}/${t})`); }))));
+    return h('option', {value:k, selected:k===UTS.active}, `${idLabel(k)} — ${shortName(k)}  (${n}/${t})`); }))));
 }
 function flyToMember(mk){
   const M = MEM[mk], list = ringsFor(mk); if(!list.length) return;
@@ -1199,7 +1206,8 @@ function renderForm(){
 function onField(e){
   const el = e.target, k = el.dataset.k; if(!k) return;
   const scope = el.dataset.scope, tgt = scope==='common' ? UTS.common : UTS[UTS.active];
-  const nv = el.value.trim(); if(String(tgt[k]??'')===nv) return;
+  let nv = el.value.trim(); if(scope!=='common' && k==='id' && !nv){ nv = autoId(UTS.active); el.value = nv; }
+  if(String(tgt[k]??'')===nv) return;
   tgt[k] = nv;
   saveState();
   if(['bottom','top','length'].includes(k)){ buildMember(UTS.active); renderTable(); renderMemberSelect(); }
@@ -1270,9 +1278,9 @@ function renderSummary(){
   if(mn!==null) sumEl.append(' · min ', h('b', null, `${mn.toFixed(1)} mm`), ` at ${at}`);
   if(ffs===null) sumEl.append(' · ', h('span', {class:'warn'}, 'enter the FFS limit to flag low readings'));
   else sumEl.append(' · ', h('b', {class: low ? 'bad' : null}, String(low)), ' below FFS');
-  $('mem-title').textContent = (UTS[mk].id ? UTS[mk].id + ' — ' : '') + MEM[mk].name;
+  $('mem-title').textContent = `${idLabel(mk)} — ${shortName(mk)}`;
   const opt = $('mem-sel').querySelector(`option[value="${mk}"]`);
-  if(opt){ const id = UTS[mk].id; opt.textContent = `${MEM[mk].name}${id?' · '+id:''}  (${n}/${tot})`; }
+  if(opt){ const id = UTS[mk].id; opt.textContent = `${idLabel(mk)} — ${shortName(mk)}  (${n}/${tot})`; }
 }
 
 // selection + popover
@@ -2362,6 +2370,36 @@ buildMember = function(...a){ _buildMemberSc(...a); renderScopeSel(); renderScop
 renderScopeAll();
 window.__scopeCount = () => SCG.children.length;
 
+// ---------- access jetty (visual reference only, not inspected) — drawing 76-X30E/M33A: two-pile trestles 15'-0" apart (piles 16/15 … 2/1) at 20'-0" centres,
+// 30'-0" to the abutment; horizontals at RL 32.53 / 18.74 / 4.95 ft with X-bracing; deck RL 36'-0". The jetty leaves the south-east corner of the pierhead
+// at about 42° to the pile grid (measured from the M33A plan) — position and angle approximate [TBC].
+G.jetty = new THREE.Group(); scene.add(G.jetty);
+(function(){
+  const jMat = new THREE.MeshStandardMaterial({color:0x8f7a5c, roughness:.9, metalness:0}), sMat = new THREE.MeshStandardMaterial({color:0x9a9890, roughness:.6, metalness:.25});
+  const th = 41.6*Math.PI/180, u = V(Math.cos(th), 0, Math.sin(th)), w = V(-Math.sin(th), 0, Math.cos(th));
+  const M0 = V(17.6*FT, 0, 28.65*FT), at = (s, o, y) => M0.clone().addScaledVector(u, s*FT).addScaledVector(w, o*FT).setY(y);
+  const BEDJ = [-18,-18,-17,-11,-11,-8,-4,-3];   // seabed at trestles 16/15 … 2/1, RL ft (M33A developed elevation) [TBC]
+  const H = [32.53, 18.74, 4.95].map(RLm), top = RLm(36.0);
+  for(let i=0;i<8;i++){
+    const s = 20*i;
+    [-7.5, 7.5].forEach(o=>G.jetty.add(cyl(at(s,o,RLm(BEDJ[i])), at(s,o,H[0]+0.15), 0.127, sMat, false, 12)));                       // 10" piles
+    H.forEach(y=>G.jetty.add(cyl(at(s,-7.5,y), at(s,7.5,y), 0.1, sMat, false, 10)));                                                     // trestle horizontals
+    [[0,1],[1,2]].forEach(([a,b])=>{ G.jetty.add(cyl(at(s,-7.5,H[a]), at(s,7.5,H[b]), 0.1, sMat, false, 10)); G.jetty.add(cyl(at(s,7.5,H[a]), at(s,-7.5,H[b]), 0.1, sMat, false, 10)); });
+    if(i<7) [-7.5, 7.5].forEach(o=>{
+      H.forEach(y=>G.jetty.add(cyl(at(s,o,y), at(s+20,o,y), 0.1, sMat, false, 10)));                                                    // longitudinal horizontals
+      [[0,1],[1,2]].forEach(([a,b])=>{ G.jetty.add(cyl(at(s,o,H[a]), at(s+20,o,H[b]), 0.1, sMat, false, 10)); G.jetty.add(cyl(at(s+20,o,H[a]), at(s,o,H[b]), 0.1, sMat, false, 10)); });
+    });
+  }
+  // deck: 20" I-beam girders on the pile lines, timber deck to RL 36'-0", from the pierhead to the abutment
+  const s0 = -8, s1 = 170, mid = (s0+s1)/2, Ld = (s1-s0)*FT;
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(Ld, 0.2, 17*FT), jMat); deck.position.copy(at(mid, 0, top - 0.1)); deck.rotation.y = -th; G.jetty.add(deck);
+  [-7.5, 7.5].forEach(o=>{ const g = new THREE.Mesh(new THREE.BoxGeometry(Ld, 0.51, 0.17), sMat); g.position.copy(at(mid, o, top - 0.2 - 0.255)); g.rotation.y = -th; G.jetty.add(g); });
+  const ab = new THREE.Mesh(new THREE.BoxGeometry(14*FT, RLm(33) - RLm(12), 19*FT), new THREE.MeshStandardMaterial({color:0xa49c8c, roughness:1}));
+  ab.position.copy(at(163, 0, (RLm(33) + RLm(12))/2)); ab.rotation.y = -th; G.jetty.add(ab);                                       // abutment (indicative)
+  [[0,'16 / 15'],[140,'2 / 1']].forEach(([s,t])=>tag(`Piles ${t}`, at(s, 9, H[0]), G.jetty, '#8a6a3a', 'dim', true));
+  tag('ACCESS JETTY (M33A) → SHORE', at(80, 0, top + 1.2), G.jetty, '#8a6a3a', 'dim', 'far');
+})();
+
 // ---------- member ID labels (a layer, off by default): one tag at the middle of every member, hidden with the structure
 G.mid = new THREE.Group(); G.context.add(G.mid);
 MKEYS.forEach(k=>{ const M = MEM[k], c = M.p0.clone().add(M.p1).multiplyScalar(0.5);
@@ -2374,6 +2412,7 @@ updateLabels = function(){
   if(!G.mid.visible) return;
   const reach = camera.position.distanceTo(controls.target) + 1.5, shown = [];
   for(const L of labels){ if(!L.mid || L.el.style.display==='none') continue;
+    if(L.hid){ L.el.style.display = 'none'; continue; }
     L.o.getWorldPosition(midTmp); const d = midTmp.distanceTo(camera.position);
     if(d > reach){ L.el.style.display = 'none'; continue; }
     shown.push([d, L]); }
@@ -2384,6 +2423,33 @@ updateLabels = function(){
     if(taken.has(key)){ L.el.style.display = 'none'; continue; }
     [-1,0,1].forEach(dx=>taken.add((cx+dx) + ',' + cy)); }
 };
+
+// ---------- labels sit behind the structure: a label is hidden while a member is between it and the viewer
+(function(){
+  const REF = [G.orient, G.tide, G.zbar, G.lvl, G.deck].filter(Boolean);
+  const isRef = o => { for(let p = o; p; p = p.parent){ if(REF.includes(p)) return true; } return false; };
+  const occluders = []; G.context.traverse(o=>{ if(o.isMesh && !isRef(o) && o.geometry && o.geometry.type==='CylinderGeometry' && !(o.material && o.material.transparent)) occluders.push(o); });
+  const ray = new THREE.Raycaster(), wp = new THREE.Vector3(), dir = new THREE.Vector3();
+  let lastKey = '', lastT = 0, pending = false;
+  function pass(){
+    const on = G.context.visible;
+    for(const L of labels){
+      if(!on){ L.hid = false; continue; }
+      if(L.el.style.display==='none' && !L.hid) continue;   // off screen or switched off: nothing to test
+      L.o.getWorldPosition(wp); dir.subVectors(wp, camera.position); const d = dir.length(); dir.normalize();
+      ray.set(camera.position, dir); ray.near = 0; ray.far = Math.max(0, d - 0.35);   // ignore the member the label belongs to
+      L.hid = ray.intersectObjects(occluders, false).length > 0;
+    }
+  }
+  const _updateLabelsOcc = updateLabels;
+  updateLabels = function(){
+    _updateLabelsOcc();
+    const now = performance.now(), key = [camera.position.x, camera.position.y, camera.position.z, controls.target.x, controls.target.y, controls.target.z, G.context.visible, labels.length, UTS.active].map(v=>typeof v==='number' ? v.toFixed(2) : String(v)).join(',');
+    if(key!==lastKey){ lastKey = key; pending = true; }
+    if(pending && now - lastT > 150){ const t0 = performance.now(); pass(); window.__occMs = performance.now() - t0; lastT = now; pending = false; }
+    for(const L of labels){ if(L.hid && L.el.style.display!=='none') L.el.style.display = 'none'; }
+  };
+})();
 
 // ---------- layer control on the model (display layers are remembered per browser)
 (function(){

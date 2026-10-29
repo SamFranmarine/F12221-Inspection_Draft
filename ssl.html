@@ -306,6 +306,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <div class="lh">Structure</div>
         <label><input type="checkbox" id="L-context" checked> Structure</label>
         <label><input type="checkbox" data-g="mid"> Member IDs</label>
+        <label><input type="checkbox" data-g="jetty" checked> Access jetty</label>
         <label><input type="checkbox" data-g="deck" checked> Deck and seabed</label>
         <div class="lh">Reference</div>
         <label><input type="checkbox" data-g="orient" checked> Orientation and grid labels</label>
@@ -459,7 +460,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <h2>Workflow</h2>
         <ol class="steps">
           <li><b>Select the member.</b> Click any blue UT point on it, or choose it in the member list on the UT data entry tab. One member = one ITP workbook.</li>
-          <li><b>Set it up.</b> Enter the Member ID, OD, WT and fit-for-service limit, then the measured length (braces) or inspect-from / to elevations (legs and piles). The rings regenerate to suit.</li>
+          <li><b>Set it up.</b> The Member ID fills itself in (structure + member, e.g. SSL-NW-21) and becomes the ITP document number — change it only if the client requires their own number; clear it to restore. Enter the OD, WT and fit-for-service limit, then the measured length (braces) or inspect-from / to elevations (legs and piles). The rings regenerate to suit.</li>
           <li><b>Initial inspection.</b> Full-length CVI, then UT at 12, 3, 6 and 9 o'clock on every ring (template 1). Red = below the fit-for-service limit.</li>
           <li><b>Record each defect</b> found in the CVI or flagged by a red reading. The tool lays out the detail grid around it (template 3), or the node grid if it's near a member end (template 4).</li>
           <li><b>Take the defect readings.</b> Click points in the model or type in the defect table.</li>
@@ -850,15 +851,14 @@ ROWS.forEach(r=>COLS.forEach(c=>{ const id = r+c, bot = SSLM.legBottom[id];
 }));
 HUBS.forEach(({H,nrm})=>{ const p = new THREE.Mesh(new THREE.CylinderGeometry(HUBR,HUBR,0.04,8), plateMat);
   p.position.copy(H); p.quaternion.setFromUnitVectors(UP, nrm); G.context.add(p); });
-(function(){ const d = new THREE.Mesh(new THREE.BoxGeometry(2*HALF+0.8, 1.2, 2*HALF+0.8), deckMat); d.position.set(0, LEGTOP+0.6, 0); G.deck.add(d); })();
-tag('Ship loader deck and circular girder (not modelled)', V(0, LEGTOP+1.35, 0), G.deck, '#b0975e', 'dim');
+const DECKTOP = 11.68;   // top of the upper structure in the engineer's model (removed from the DWG) — deck block is indicative only
+(function(){ const d = new THREE.Mesh(new THREE.BoxGeometry(2*HALF+0.8, DECKTOP-LEGTOP, 2*HALF+0.8), deckMat); d.position.set(0, (LEGTOP+DECKTOP)/2, 0); G.deck.add(d); })();
+tag('Ship loader deck and circular girder (not modelled)', V(0, DECKTOP+0.4, 0), G.deck, '#b0975e', 'dim');
 Object.keys(MODS).forEach(m=>{ const [cx,cz] = modCentre(m); tag(`${m} MODULE`, V(cx, LEGTOP+0.35, cz), G.orient, '#7a6a48', 'big', 'far'); });
 // grid bubbles at leg tops
 ROWS.forEach(r=>COLS.forEach(c=>tag(r+c, legP(r+c, LEGTOP+0.15), G.orient, '#002060', 'dim', true)));
 ROWS.forEach(r=>tag(r, V(HALF+1.3, LEGTOP, rowZ(r)), G.orient, '#002060', 'big', 'far'));
 COLS.forEach(c=>tag(String(c), V(colX(c), LEGTOP, HALF+1.3), G.orient, '#002060', 'big', 'far'));
-tag('SHIPS BERTH', V(0, 0, HALF+2.4), G.orient, '#2f6fb5', 'big', 'far');
-tag('SHORE', V(0, 0, -HALF-2.4), G.orient, '#2f6fb5', 'big', 'far');
 const bed = new THREE.Mesh(new THREE.PlaneGeometry(2*HALF+6, 2*HALF+6), new THREE.MeshStandardMaterial({color:0xb9a98a, roughness:1, transparent:true, opacity:.35, side:THREE.DoubleSide}));
 bed.rotation.x = -Math.PI/2; bed.position.set(0,SEABED,0); G.deck.add(bed);
 
@@ -886,8 +886,10 @@ tag('SOW 4.2: HAT + 2 m', V(SX-0.05,ST,SZ), G.zbar, '#002060', 'l');
 [...SSLM.levels.top.map((y,i)=>[i===0 ? 'Top horizontal · top of Bay 1' : `Top of Bay ${i+1}`, y]), ['Bottom of the jacket', SSLM.levels.jacketBottom], ['Base frame top (Bay 7)', SSLM.levels.baseTop], ['Base frame bottom', SSLM.levels.baseBottom]]
   .forEach(([t,y])=>tag(`${t}  ${y>=0?'+':'−'}${Math.abs(y).toFixed(2)} m`, V(HALF+0.5, y, HALF+0.3), G.lvl, '#7a6a48', 'r dim'));
 // compass: west face toward the viewer (+z), north to the left (−x)
-[['N',V(-HALF-2.6,0,0)],['S',V(HALF+2.6,0,0)],['W',V(0,0,HALF+2.6)],['E',V(0,0,-HALF-2.6)]].forEach(([t,p])=>tag(t, p, G.orient, '#002060', 'big'));
-arrow(V(-HALF-1.2,0.02,0), V(-1,0,0), 1.0, 0x002060, G.orient, 0.25);
+// compass above the top of the structure (clear of the deck)
+const CY = DECKTOP + 1.2;
+[['N',V(-HALF-2.0,CY,0)],['S',V(HALF+2.0,CY,0)],['W · SHIPS BERTH',V(0,CY,HALF+2.0)],['E · SHORE',V(0,CY,-HALF-2.0)]].forEach(([t,p])=>tag(t, p, G.orient, '#002060', 'big'));
+arrow(V(-HALF-0.6,CY-0.35,0), V(-1,0,0), 1.0, 0x002060, G.orient, 0.25);
 
 // ---------- INITIAL INSPECTION: full-length CVI + UT rings every 500 mm, 4 points (12 / 3 / 6 / 9) — data entry (instanced)
 const IC = 0x0b5cad, ICs = '#0b5cad';
@@ -897,9 +899,13 @@ const KNAME = k => k===0 ? '12' : String(k);
 const cviAct = new THREE.MeshBasicMaterial({color:0x2f8cff, transparent:true, opacity:.28, side:THREE.DoubleSide, depthWrite:false});
 
 const DEFAULTS = { active:(SSLM.members.find(m=>m.kind==='leg' && m.leg==='X3' && m.sec===3)||SSLM.members[0]).k, common:{date:'', operator:'', cert:'', equip:'', hat:1.4} };
+// Member ID (ITP document number F12221-ITP-002-<id>): filled automatically as structure + tool ID, e.g. SSL-NW-21; editable, and clearing it restores the default
+const autoId = k => `SSL-${k}`;
+const shortName = k => MEM[k].name.startsWith(k + ' — ') ? MEM[k].name.slice(k.length + 3) : MEM[k].name;
+const idLabel = k => { const id = (UTS[k] && UTS[k].id) || autoId(k); return id===autoId(k) ? id : `${id} (${k})`; };
 MKEYS.forEach(k=>{ const M = MEM[k];
-  DEFAULTS[k] = M.kind==='elev' ? {id:'', structure:'SSL', od:'', wt:'', ffs:'', bottom:+M.p0.y.toFixed(2), top:+M.p1.y.toFixed(2), readings:{}, remarks:{}}
-                                : {id:'', structure:'SSL', od:'', wt:'', ffs:'', length:M.len, readings:{}, remarks:{}};
+  DEFAULTS[k] = M.kind==='elev' ? {id:autoId(k), structure:'SSL', od:'', wt:'', ffs:'', bottom:+M.p0.y.toFixed(2), top:+M.p1.y.toFixed(2), readings:{}, remarks:{}}
+                                : {id:autoId(k), structure:'SSL', od:'', wt:'', ffs:'', length:M.len, readings:{}, remarks:{}};
 });
 const STORE_KEY = 'ssl-itp002-ut-v3', BACKUP_FMT = 'ssl-itp002-ut';
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -932,7 +938,7 @@ function mergeState(d){
     Object.assign(st.common, d.common||{});
     MKEYS.forEach(k=>{ if(d[k]) { Object.assign(st[k], d[k]); st[k].readings = d[k].readings||{}; st[k].remarks = d[k].remarks||{}; } });
   }
-  MKEYS.forEach(k=>{ if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
+  MKEYS.forEach(k=>{ if(!String(st[k].id||'').trim()) st[k].id = autoId(k); if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
   return st;
 }
 let UTS = loadState();
@@ -1094,7 +1100,7 @@ function memberProgress(mk){
 function renderMemberSelect(){
   const sel = $('mem-sel');
   sel.replaceChildren(...GROUPS.map(g=>h('optgroup', {label:g}, MKEYS.filter(k=>MEM[k].group===g).map(k=>{ const [n,t] = memberProgress(k); const id = UTS[k].id;
-    return h('option', {value:k, selected:k===UTS.active}, `${MEM[k].name}${id?' · '+id:''}  (${n}/${t})`); }))));
+    return h('option', {value:k, selected:k===UTS.active}, `${idLabel(k)} — ${shortName(k)}  (${n}/${t})`); }))));
 }
 function flyToMember(mk){
   const M = MEM[mk], list = ringsFor(mk); if(!list.length) return;
@@ -1144,7 +1150,8 @@ function renderForm(){
 function onField(e){
   const el = e.target, k = el.dataset.k; if(!k) return;
   const scope = el.dataset.scope, tgt = scope==='common' ? UTS.common : UTS[UTS.active];
-  const nv = el.value.trim(); if(String(tgt[k]??'')===nv) return;
+  let nv = el.value.trim(); if(scope!=='common' && k==='id' && !nv){ nv = autoId(UTS.active); el.value = nv; }
+  if(String(tgt[k]??'')===nv) return;
   tgt[k] = nv;
   saveState();
   if(['bottom','top','length'].includes(k)){ buildMember(UTS.active); renderTable(); renderMemberSelect(); }
@@ -1215,9 +1222,9 @@ function renderSummary(){
   if(mn!==null) sumEl.append(' · min ', h('b', null, `${mn.toFixed(1)} mm`), ` at ${at}`);
   if(ffs===null) sumEl.append(' · ', h('span', {class:'warn'}, 'enter the FFS limit to flag low readings'));
   else sumEl.append(' · ', h('b', {class: low ? 'bad' : null}, String(low)), ' below FFS');
-  $('mem-title').textContent = (UTS[mk].id ? UTS[mk].id + ' — ' : '') + MEM[mk].name;
+  $('mem-title').textContent = `${idLabel(mk)} — ${shortName(mk)}`;
   const opt = $('mem-sel').querySelector(`option[value="${mk}"]`);
-  if(opt){ const id = UTS[mk].id; opt.textContent = `${MEM[mk].name}${id?' · '+id:''}  (${n}/${tot})`; }
+  if(opt){ const id = UTS[mk].id; opt.textContent = `${idLabel(mk)} — ${shortName(mk)}  (${n}/${tot})`; }
 }
 
 // selection + popover
@@ -2307,6 +2314,22 @@ buildMember = function(...a){ _buildMemberSc(...a); renderScopeSel(); renderScop
 renderScopeAll();
 window.__scopeCount = () => SCG.children.length;
 
+// ---------- access jetty (visual reference only, not inspected) — drawing 63X30Z/M61: 24'-0" o/a timber deck on steel girders, RL 36'-0",
+// centred 15'-0" south of the structure centre, from just east of the east legs to the cliff face 109'-6" east of centre. Supports are not shown on M61 [TBC].
+G.jetty = new THREE.Group(); scene.add(G.jetty);
+(function(){
+  const jMat = new THREE.MeshStandardMaterial({color:0x8f7a5c, roughness:.9, metalness:0}), sMat = new THREE.MeshStandardMaterial({color:0x8a8f96, roughness:.6, metalness:.3});
+  const top = 36*FT, cx = 15*FT, z0 = -21.2*FT, z1 = -109.5*FT, W = 24*FT, L = z0 - z1, zc = (z0 + z1)/2;
+  const box = (w,h,d,x,y,z,m) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); b.position.set(x,y,z); G.jetty.add(b); return b; };
+  box(W, 0.15, L, cx, top - 0.075, zc, jMat);                                                     // timber decking
+  [-10,-6,-2,2,6,10].forEach((o,i)=>{ const deep = (i===0||i===5) ? 0.56 : 0.30;                   // 22" x 7" RSJ outer girders, 12" x 5" RSJ stringers
+    box(0.18, deep, L, cx + o*FT, top - 0.15 - deep/2, zc, sMat); });
+  for(let z = z0; z >= z1 - 0.01; z -= 2.4){ [-1,1].forEach(sd=>G.jetty.add(cyl(V(cx + sd*W/2, top, z), V(cx + sd*W/2, top + 1.1, z), 0.025, sMat, false, 8))); }   // handrail posts
+  [0.55, 1.1].forEach(h=>[-1,1].forEach(sd=>G.jetty.add(cyl(V(cx + sd*W/2, top + h, z0), V(cx + sd*W/2, top + h, z1), 0.02, sMat, false, 8))));          // rails
+  box(W + 1.2, 6, 2.0, cx, top - 3.2, z1 - 1.0, new THREE.MeshStandardMaterial({color:0xa49c8c, roughness:1}));   // abutment / cliff face (indicative)
+  tag('ACCESS JETTY (M61) → SHORE', V(cx, top + 1.6, zc), G.jetty, '#8a6a3a', 'dim', 'far');
+})();
+
 // ---------- member ID labels (a layer, off by default): one tag at the middle of every member, hidden with the structure
 G.mid = new THREE.Group(); G.context.add(G.mid);
 MKEYS.forEach(k=>{ const M = MEM[k], c = M.p0.clone().add(M.p1).multiplyScalar(0.5);
@@ -2319,6 +2342,7 @@ updateLabels = function(){
   if(!G.mid.visible) return;
   const reach = camera.position.distanceTo(controls.target) + 1.5, shown = [];
   for(const L of labels){ if(!L.mid || L.el.style.display==='none') continue;
+    if(L.hid){ L.el.style.display = 'none'; continue; }
     L.o.getWorldPosition(midTmp); const d = midTmp.distanceTo(camera.position);
     if(d > reach){ L.el.style.display = 'none'; continue; }
     shown.push([d, L]); }
@@ -2329,6 +2353,33 @@ updateLabels = function(){
     if(taken.has(key)){ L.el.style.display = 'none'; continue; }
     [-1,0,1].forEach(dx=>taken.add((cx+dx) + ',' + cy)); }
 };
+
+// ---------- labels sit behind the structure: a label is hidden while a member is between it and the viewer
+(function(){
+  const REF = [G.orient, G.tide, G.zbar, G.lvl, G.deck].filter(Boolean);
+  const isRef = o => { for(let p = o; p; p = p.parent){ if(REF.includes(p)) return true; } return false; };
+  const occluders = []; G.context.traverse(o=>{ if(o.isMesh && !isRef(o) && o.geometry && o.geometry.type==='CylinderGeometry' && !(o.material && o.material.transparent)) occluders.push(o); });
+  const ray = new THREE.Raycaster(), wp = new THREE.Vector3(), dir = new THREE.Vector3();
+  let lastKey = '', lastT = 0, pending = false;
+  function pass(){
+    const on = G.context.visible;
+    for(const L of labels){
+      if(!on){ L.hid = false; continue; }
+      if(L.el.style.display==='none' && !L.hid) continue;   // off screen or switched off: nothing to test
+      L.o.getWorldPosition(wp); dir.subVectors(wp, camera.position); const d = dir.length(); dir.normalize();
+      ray.set(camera.position, dir); ray.near = 0; ray.far = Math.max(0, d - 0.35);   // ignore the member the label belongs to
+      L.hid = ray.intersectObjects(occluders, false).length > 0;
+    }
+  }
+  const _updateLabelsOcc = updateLabels;
+  updateLabels = function(){
+    _updateLabelsOcc();
+    const now = performance.now(), key = [camera.position.x, camera.position.y, camera.position.z, controls.target.x, controls.target.y, controls.target.z, G.context.visible, labels.length, UTS.active].map(v=>typeof v==='number' ? v.toFixed(2) : String(v)).join(',');
+    if(key!==lastKey){ lastKey = key; pending = true; }
+    if(pending && now - lastT > 150){ const t0 = performance.now(); pass(); window.__occMs = performance.now() - t0; lastT = now; pending = false; }
+    for(const L of labels){ if(L.hid && L.el.style.display!=='none') L.el.style.display = 'none'; }
+  };
+})();
 
 // ---------- layer control on the model (display layers are remembered per browser)
 (function(){
