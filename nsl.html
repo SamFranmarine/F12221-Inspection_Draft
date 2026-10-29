@@ -36,6 +36,7 @@ header .ref{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
 .tag.r{transform:translate(0,-50%)}
 .tag.big{font-family:var(--font-ui);font-weight:600;font-size:12px;letter-spacing:.02em}
 .tag.dim{font-size:10px;opacity:.9}
+.tag.mid{font-size:9.5px;padding:0 4px;border-left-width:2px;opacity:.95;pointer-events:none}
 .presets{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 20px)}
 .presets button{font:600 12px var(--font-ui);letter-spacing:.03em;text-transform:uppercase;padding:6px 10px;border-radius:3px;border:1px solid var(--line);
   background:var(--panel);color:var(--fg);cursor:pointer}
@@ -304,6 +305,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <label><input type="checkbox" data-g="scope" checked> Scope highlight</label>
         <div class="lh">Structure</div>
         <label><input type="checkbox" id="L-context" checked> Structure</label>
+        <label><input type="checkbox" data-g="mid"> Member IDs</label>
         <label><input type="checkbox" data-g="deck" checked> Deck, girder, pile caps and seabed</label>
         <div class="lh">Reference</div>
         <label><input type="checkbox" data-g="orient" checked> Orientation, grid and pile numbers</label>
@@ -2286,15 +2288,17 @@ function openMemberDlg(mk){
   $('scm-cancel').onclick = closeDlg;
   $('scm-ok').onclick = ()=>{ sc.members = sc.members || {}; const note = $('scm-note').value.trim(); sc.members[mk] = Object.assign({cat:$('scm-cat').value}, note ? {note} : {}); saveState(); closeDlg(); renderScopeAll(); toast(`${mk} is in ${sc.name}.`); };
 }
-// tokens like X-8, Z1-S3, P29-S2, NW3W-S1, or a whole leg / pile (X3, P29, NW3W) → all of its sections
+// tokens like NW-21, TN-03, P29-S2, NW3W-S1, previous IDs, or a whole tower / elevation / leg / pile (NW, TN, X3, P29) → all of its members
 function matchMembers(text){
   const upper = {}; MKEYS.forEach(k=>{ upper[k.toUpperCase()] = k; });
   const found = new Set(), missed = [];
   text.split(/[\s,;]+/).map(t=>t.trim().replace(/^GRIDLINE/i,'')).filter(Boolean).forEach(t=>{
     const u = t.toUpperCase();
     if(upper[u]){ found.add(upper[u]); return; }
-    const secs = MKEYS.filter(k=>k.toUpperCase().startsWith(u + '-S'));
-    if(secs.length){ secs.forEach(k=>found.add(k)); return; }
+    const LG = typeof LEGACY!=='undefined' ? LEGACY : {}, lk = Object.keys(LG).find(k=>k.toUpperCase()===u);
+    if(lk){ found.add(LG[lk]); return; }   // previous member ID
+    const secs = MKEYS.filter(k=>k.toUpperCase().startsWith(u + '-S') || k.toUpperCase().startsWith(u + '-') && /^[A-Z]+$/.test(u) || (MEM[k].leg||'').toUpperCase()===u);
+    if(secs.length){ secs.forEach(k=>found.add(k)); return; }   // a whole tower / elevation (NW, TN), or every section of a leg or pile (X3, P29)
     missed.push(t); });
   return {found:[...found], missed};
 }
@@ -2327,7 +2331,7 @@ function openScopeEdit(id){
     h('div', {class:'form'},
       h('label', {class:'wide'}, 'Name', h('input', {id:'sce-name', value:s.name||'', autocomplete:'off', placeholder:'e.g. 2026 campaign — client repair list'})),
       h('label', {class:'wide'}, 'Reference (project / phase / SOW)', h('input', {id:'sce-ref', value:s.ref||'', autocomplete:'off', placeholder:'e.g. F12221 Ph1'})),
-      h('label', {class:'wide'}, 'Add members — paste the client\'s list (any separators). A leg or pile on its own (X3, P29) adds all its sections.', h('textarea', {id:'sce-paste', rows:'4', placeholder:'X-8, X-12, Z1-S3\nP29-S2  1-35'})),
+      h('label', {class:'wide'}, 'Add members — paste the client\'s list (any separators). A pile or column on its own (P29, NW3W) adds all its sections.', h('textarea', {id:'sce-paste', rows:'4', placeholder:'P29-S2, B-12, 1-35\nNW3W  1-35'})),
       h('label', null, 'Category for pasted members', catSelect('sce-cat', 'repair')),
       h('label', null, 'Note for pasted members', h('input', {id:'sce-note', autocomplete:'off', placeholder:'e.g. client RFI 012'}))),
     h('p', {class:'small', id:'sce-msg'}),
@@ -2357,6 +2361,29 @@ const _buildMemberSc = buildMember;
 buildMember = function(...a){ _buildMemberSc(...a); renderScopeSel(); renderScopePanel(); buildScope(); };
 renderScopeAll();
 window.__scopeCount = () => SCG.children.length;
+
+// ---------- member ID labels (a layer, off by default): one tag at the middle of every member, hidden with the structure
+G.mid = new THREE.Group(); G.context.add(G.mid);
+MKEYS.forEach(k=>{ const M = MEM[k], c = M.p0.clone().add(M.p1).multiplyScalar(0.5);
+  if(M.side) c.add(M.side.clone().multiplyScalar(0.5));
+  const rec = tag(k, c, G.mid, M.kind==='elev' ? '#0b5cad' : '#002060', 'mid'); rec.mid = true; });
+// declutter: show only labels on the near side of the view focus, and where two would overlap on screen keep the nearer one
+const _updateLabelsMid = updateLabels, midTmp = new THREE.Vector3();
+updateLabels = function(){
+  _updateLabelsMid();
+  if(!G.mid.visible) return;
+  const reach = camera.position.distanceTo(controls.target) + 1.5, shown = [];
+  for(const L of labels){ if(!L.mid || L.el.style.display==='none') continue;
+    L.o.getWorldPosition(midTmp); const d = midTmp.distanceTo(camera.position);
+    if(d > reach){ L.el.style.display = 'none'; continue; }
+    shown.push([d, L]); }
+  shown.sort((a,b)=>a[0]-b[0]);
+  const taken = new Set();
+  for(const [, L] of shown){ const x = parseFloat(L.el.style.left), y = parseFloat(L.el.style.top), cx = Math.floor(x/56), cy = Math.floor(y/16);
+    const key = cx + ',' + cy;
+    if(taken.has(key)){ L.el.style.display = 'none'; continue; }
+    [-1,0,1].forEach(dx=>taken.add((cx+dx) + ',' + cy)); }
+};
 
 // ---------- layer control on the model (display layers are remembered per browser)
 (function(){
