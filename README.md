@@ -47,6 +47,9 @@ Free to set up and trial. Free Supabase projects pause after 7 days without use,
 - `Load backup` while signed in as an Editor replaces the team's copy (after a confirmation).
 
 ## Change log
+- **2026-10-30** — UT report: Franmarine style (Calibri, navy, logo, UNCONTROLLED WHEN PRINTED footer); 3D pictures added — location on the structure and the member with its reading points on the report page, and a close-up of the grid on each defect sheet.
+- **2026-10-30** — Export UT report (Excel): one report per member in a simple single-page layout (test conditions, one row per ring / additional point / defect, result, sign-off), plus Readings and defect detail sheets. New Inspection details fields: UT unit, serial no., probe, calibration block, couplant, technique, surface condition. The previous ITP workbook export is kept.
+- **2026-10-30** — Export all data (CSV): every reading on the structure (rings, additional points, defect grid / edge / pit readings) with point IDs, plus one row per defect. The single-member export is now labelled Export member CSV.
 - **2026-10-29** — Access jetty added to both models as a visual reference (Layers → Access jetty): SSL per 63X30Z/M61, NSL per 76-X30E/M33A. Not inspected.
 - **2026-10-29** — Member ID fills in automatically as structure + member (e.g. SSL-NW-21, NSL-P29-S2); it is the ITP document number. Editable; clearing it restores the default.
 - **2026-10-29** — Compass marks moved above the structure; labels are hidden while a member is between them and the viewer.

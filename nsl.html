@@ -446,10 +446,12 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
       </section>
       <section class="actions">
         <h2>Export</h2>
-        <button type="button" id="btn-itp" class="primary">Export to ITP workbook</button>
+        <button type="button" id="btn-utr" class="primary">Export UT report (Excel)</button>
+        <p class="small">One report per member: test conditions, one row per ring / additional point / defect with min, max and wall reduction, the result and sign-off boxes; a Readings sheet with every clock reading and point ID; and a detail sheet for each defect. Fill in the inspection details (UT unit, probe, calibration block …) once — they apply to every member.</p>
+        <button type="button" id="btn-itp">Export to ITP workbook (previous format)</button>
         <p class="small">Select this member's ITP file (F12221-ITP-002). The Cover member details, Member Survey Sections B and C, the Section H ring grid (including additional points) and a Point Register sheet listing every point ID are filled, and a completed copy is saved. Re-exporting replaces the ring grid.</p>
         <p class="small" id="export-note"></p>
-        <div class="btnrow"><button type="button" id="btn-csv">Export CSV</button><button type="button" id="btn-backup">Save backup</button><button type="button" id="btn-load">Load backup</button><button type="button" id="btn-clear" class="danger">Clear readings</button></div>
+        <div class="btnrow"><button type="button" id="btn-csv">Export member CSV</button><button type="button" id="btn-csv-all">Export all data (CSV)</button><button type="button" id="btn-backup">Save backup</button><button type="button" id="btn-load">Load backup</button><button type="button" id="btn-clear" class="danger">Clear readings</button></div>
         <p class="small ah-local-note">Readings save automatically in this browser on this device. Save a backup file at the end of each shift.</p>
         <input type="file" id="file-itp" accept=".xlsx" hidden>
         <input type="file" id="file-backup" accept=".json,application/json" hidden>
@@ -464,7 +466,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
           <li><b>Initial inspection.</b> Full-length CVI, then UT at 12, 3, 6 and 9 o'clock on every ring (template 1). Red = below the fit-for-service limit.</li>
           <li><b>Record each defect</b> found in the CVI or flagged by a red reading. The tool lays out the detail grid around it (template 3), or the node grid if it's near a member end (template 4).</li>
           <li><b>Take the defect readings.</b> Click points in the model or type in the defect table.</li>
-          <li><b>Export to the ITP workbook</b> and save a backup at the end of each shift.</li>
+          <li><b>Export the UT report</b> for the member (one Excel file, ready to print and sign) and save a backup at the end of each shift.</li>
         </ol>
       </section>
 
@@ -602,7 +604,8 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
       <section>
         <h2>6 · Export and backup</h2>
         <ul class="tips">
-          <li><b>Export to ITP workbook</b>: choose this member's F12221-ITP-002 file. The tool fills the Cover, the Member Survey (setup, ring readings, defect register) and one D-S sheet per defect (D-S02 onwards are copied from D-S01), then saves a completed copy.</li>
+          <li><b>Export UT report (Excel)</b>: one report per member — test conditions from the Inspection details, one row per ring / additional point / defect with min, max and wall reduction, the result, and sign-off boxes; plus a Readings sheet (every clock reading with its point ID) and a detail sheet per defect. No template file needed.</li>
+          <li><b>Export to ITP workbook (previous format)</b>: choose this member's F12221-ITP-002 file. The tool fills the Cover, the Member Survey (setup, ring readings, defect register) and one D-S sheet per defect (D-S02 onwards are copied from D-S01), then saves a completed copy.</li>
           <li>Sign in with your email to share readings live with the team (green <i>Live</i> pill in the header). Franmarine users are Editors; other users are added by Franmarine in the <i>Access</i> tab as Viewers or Editors. Without signing in, readings save in this browser only (<i>Local only</i>). Use <b>Save backup</b> at the end of each shift; <b>Load backup</b> while signed in replaces the team's copy after you confirm.</li>
           <li>Additional points go into the ring grid: in the ring's row if they share its position and the clock column is free, otherwise in their own AP rows after the rings (up to 40 rows in total).</li>
           <li>Each member's data stays in this page until you clear it, so you can re-export after corrections.</li>
@@ -1188,7 +1191,9 @@ const FIELDS = [
   ['od','Nominal OD (mm)','num'], ['wt','Nominal WT (mm)','num'], ['ffs','Fit-for-service limit (mm)','num'],
 ];
 const EXTENT = { elev:[['bottom','Inspect from — bottom (m LAT)','num'],['top','Inspect to — top (m LAT)','num']], axial:[['length','Length between datum and end (mm)','num']] };
-const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['equip','Equipment ID','text'],['hat','HAT (m rel. LAT)','num']];
+const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['equip','Equipment ID','text'],['hat','HAT (m rel. LAT)','num'],
+  ['unit','UT unit (make / model)','text'],['serial','UT unit serial no.','text'],['probe','Probe size / frequency','text'],['calblock','Calibration block','text'],
+  ['couplant','Couplant','text'],['technique','Technique','select:,Pulse-echo,Echo-echo (through coating)'],['surface','Surface condition','text']];
 function fieldEl(scope, [k,label,type]){
   const id = `f-${scope}-${k}`, v = scope==='common' ? UTS.common[k] : UTS[UTS.active][k];
   if(type.startsWith('select:')) return h('label', {for:id}, label, h('select', {id, 'data-scope':scope, 'data-k':k}, type.slice(7).split(',').map(o=>h('option', {selected:o===v}, o))));
@@ -2543,6 +2548,356 @@ function writePointRegister(wb, mk){
   ws.autoFilter = {from:'A4', to:'H4'};
   return ws;
 }
+
+// ---------- EXPORT ALL DATA (CSV): every recorded reading on the structure, one row per point, plus one row per recorded defect
+function exportAllCsv(){
+  const STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', c = UTS.common || {};
+  const scopeNames = k => Object.values((c.scopes)||{}).filter(sc=>sc.members && sc.members[k]).map(sc=>sc.name).join('; ');
+  const head = ['Structure','Member ID','Tool ID','Group','Description','Nominal OD (mm)','Nominal WT (mm)','FFS limit (mm)','Point ID','Record','Ring / station','Position','Clock','WT (mm)','Status','Note',
+                'Defect','Defect type','Defect size','Defect position','Defect clock','Defect note','Scopes','Inspection date','UT operator','Operator cert no.','Equipment ID'];
+  const rows = [head]; let nPts = 0, nMem = 0, nDef = 0;
+  MKEYS.forEach(k=>{
+    const m = UTS[k], M = MEM[k], base = [STRUCT, m.id || k, k, M.group, shortName ? shortName(k) : M.name, m.od||'', m.wt||'', m.ffs||''];
+    const tail = [scopeNames(k), c.date||'', c.operator||'', c.cert||'', c.equip||''];
+    const pts = pointRegister(k).filter(r=>r[5]!==null && r[5]!==undefined);
+    const defs = m.defects || [];
+    if(!pts.length && !defs.length) return;
+    nMem++;
+    pts.forEach(r=>{ nPts++; const dm = /^D-S(\d+)/.exec(String(r[1])); const d = dm ? nth(defs, +dm[1]-1) : null;
+      rows.push([...base, r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], dm ? `D-S${dm[1]}` : '', d ? DTYPES[d.type].label : '', '', '', '', '', ...tail]); });
+    defs.forEach((d,di)=>{ nDef++;
+      const size = d.type==='crack' ? `${d.len} mm @ ${d.ang||0}°` : d.type==='pitting' ? `Ø${d.dia} mm${d.depth ? ', ' + d.depth + ' mm deep' : ''}` : `${d.ax} × ${d.cw} mm${d.depth ? ', ' + d.depth + ' mm deep' : ''}`;
+      rows.push([...base, '', 'Defect record', '', '', '', '', '', '', defId(di), DTYPES[d.type].label, size, posLabel(k, sFromPos(k, d.pos)), fmtK(+d.clock), d.note||'', ...tail]); });
+  });
+  if(rows.length===1){ toast('No readings or defects recorded yet.', true); return; }
+  const csv = '﻿' + rows.map(r=>r.map(x=>{ const s = x===null || x===undefined ? '' : String(x); return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(',')).join('\r\n');
+  saveFile(`F12221-${STRUCT}-all-data-${stamp()}.csv`, csv);
+  $('export-note').textContent = `All data export: ${nPts} readings and ${nDef} defect${nDef===1?'':'s'} on ${nMem} member${nMem===1?'':'s'}.`;
+}
+$('btn-csv-all').addEventListener('click', exportAllCsv);
+
+// ---------- UT REPORT (one per member): F12221-UTR-<Member ID>.xlsx, generated in the browser — no template file needed
+// Sheet "Report": header block (test conditions), one row per ring / additional point / defect (min, max, wall reduction), result line, sign-off.
+// Sheet "Readings": every reading by clock position with its point ID.  One sheet per defect ("D-S01" …): defect description, 12-position grid, edge / pit readings, repair-design features.
+const FM_LOGO = 'data:image/png;base64,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';   // Franmarine logo (white background)
+// ---------- 3D snapshots for the reports: fixed camera, white background, other members faded, key labels drawn onto the image
+const SNAP_MATS = () => [typeof paintMat!=='undefined' ? paintMat : null, typeof steelMat!=='undefined' ? steelMat : null, typeof colMat!=='undefined' ? colMat : null, typeof plateMat!=='undefined' ? plateMat : null].filter(Boolean);
+function snapshot({pos, tgt, w, h, fade, hide, show, extra, labels, before, after, k}){
+  k = k || 1;   // label scale (pictures rendered at 2× for in-cell placement)
+  const st = {pos:camera.position.clone(), tgt:controls.target.clone(), aspect:camera.aspect, size:renderer.getSize(new THREE.Vector2()), pr:renderer.getPixelRatio(), bg:scene.background};
+  const vis = {}; Object.keys(G).forEach(k=>{ if(G[k] && G[k].isObject3D) vis[k] = G[k].visible; });
+  const mats = SNAP_MATS().map(m=>[m, m.transparent, m.opacity, m.depthWrite]);
+  try{
+    (hide||[]).forEach(k=>{ if(G[k]) G[k].visible = false; }); (show||[]).forEach(k=>{ if(G[k]) G[k].visible = true; });
+    if(fade!==undefined) SNAP_MATS().forEach(m=>{ m.transparent = true; m.opacity = fade; m.depthWrite = false; m.needsUpdate = true; });
+    (extra||[]).forEach(o=>scene.add(o));
+    if(before) before();
+    scene.background = new THREE.Color(0xffffff);
+    renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix();
+    camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt); camera.updateMatrixWorld();
+    renderer.render(scene, camera);
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h; const g = cv.getContext('2d');
+    g.drawImage(renderer.domElement, 0, 0, w, h);
+    g.textBaseline = 'middle';
+    (labels||[]).forEach(L=>{ const p = L.p.clone().project(camera); if(p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05) return;
+      const x = (p.x+1)/2*w, y = (1-p.y)/2*h; g.font = `${L.bold ? '700 ' : ''}${(L.size||13)*k}px Arial`;
+      const tw = g.measureText(L.text).width;
+      g.fillStyle = 'rgba(255,255,255,0.88)'; g.fillRect(x - 3*k, y - 9*k, tw + 6*k, 18*k);
+      g.fillStyle = L.color || '#002060'; g.fillRect(x - 3*k, y - 9*k, 3*k, 18*k); g.fillText(L.text, x + 2*k, y); });
+    // frame
+    g.strokeStyle = '#8c96a6'; g.lineWidth = k; g.strokeRect(k/2, k/2, w-k, h-k);
+    return cv.toDataURL('image/png');
+  } finally {
+    if(after) after();
+    (extra||[]).forEach(o=>{ scene.remove(o); if(o.geometry) o.geometry.dispose(); });
+    mats.forEach(([m,t,o,d])=>{ m.transparent = t; m.opacity = o; m.depthWrite = d; m.needsUpdate = true; });
+    Object.entries(vis).forEach(([k,v])=>{ G[k].visible = v; });
+    scene.background = st.bg;
+    renderer.setPixelRatio(st.pr); renderer.setSize(st.size.x, st.size.y, false); camera.aspect = st.aspect; camera.updateProjectionMatrix();
+    camera.position.copy(st.pos); controls.target.copy(st.tgt); controls.update(); renderer.render(scene, camera);
+  }
+}
+function structBox(){ const b = new THREE.Box3(); MKEYS.forEach(k=>{ b.expandByPoint(MEM[k].p0); b.expandByPoint(MEM[k].p1); }); return b; }
+// 1 — where the member is: whole structure, member in red, everything else faded
+function snapLocation(mk, w, h, k){
+  const M = MEM[mk], b = structBox(), c = b.getCenter(new THREE.Vector3()), size = b.getSize(new THREE.Vector3());
+  const mid = M.p0.clone().add(M.p1).multiplyScalar(0.5);
+  let dir = V(Math.sign(mid.x - c.x) || 1, 0, Math.sign(mid.z - c.z) || 1).normalize();
+  const dist = Math.max(size.x, size.y, size.z) * (w/h < 1.4 ? 2.15 : 2.6);
+  const pos = c.clone().addScaledVector(dir, dist).add(V(0, size.y*0.28, 0));
+  const hl = cyl(M.p0, M.p1, Math.max(M.r*2.2, 0.28), new THREE.MeshBasicMaterial({color:0xd62828}), false, 16);
+  const lab = [{p:mid.clone().add(V(0, 0.3, 0)), text:(UTS[mk].id || mk), color:'#d62828', bold:true, size:15}];
+  const comp = typeof PID_STRUCT!=='undefined' && PID_STRUCT==='N'
+    ? [['N', V(0,0,-1)], ['E', V(1,0,0)], ['S', V(0,0,1)], ['W', V(-1,0,0)]] : [['N', V(-1,0,0)], ['S', V(1,0,0)], ['W', V(0,0,1)], ['E', V(0,0,-1)]];
+  comp.filter(([t])=>t==='N').forEach(([t,d])=>lab.push({p:c.clone().addScaledVector(d, Math.max(size.x, size.z)*0.75).setY(b.max.y + 1.0), text:'N (north)', color:'#002060', bold:true, size:14}));
+  return snapshot({pos, tgt:c, w, h, fade:0.32, hide:['rings','defx','zones','orient','deck','mid','scope'], extra:[hl], labels:lab, k});
+}
+// 2 — the member: rings and reading points (coloured by result), defects, structure behind faded
+function memberView(mk){
+  const M = MEM[mk], list = ringsFor(mk);
+  const s0 = list.length ? list[0].s : 0, s1 = list.length ? nth(list, list.length-1).s : 1, L = Math.abs(s1-s0);
+  const t1 = M.o.clone().addScaledVector(M.a, (s0+s1)/2);
+  let out = V(t1.x, 0, t1.z); if(out.lengthSq()<1e-6) out = V(0,0,1); out.normalize(); if(M.inner) out.negate();
+  const side = new THREE.Vector3().crossVectors(UP, out).multiplyScalar(0.25);
+  return {t1, p1: t1.clone().addScaledVector(out, Math.max(3.0, L*1.75)).add(side).add(V(0, 0.6 + L*0.12, 0))};
+}
+function snapMember(mk, w, h, k){
+  const M = MEM[mk], list = ringsFor(mk), {t1, p1} = memberView(mk), lab = [], s1 = list.length ? nth(list, list.length-1).s : 0;
+  const step = Math.max(1, Math.ceil(list.length / 12));
+  list.forEach((R,i)=>{ if(i % step && i !== list.length-1) return; lab.push({p:M.o.clone().addScaledVector(M.a, R.s).add(M.side.clone().multiplyScalar(1.6)), text:`R${String(i+1).padStart(2,'0')}`, color:'#0b5cad', size:12}); });
+  (UTS[mk].extra||[]).forEach(x=>lab.push({p:M.o.clone().addScaledVector(M.a, sFromPos(mk, x.pos)).add(M.side.clone().multiplyScalar(-1.6)), text:xLabel(x), color:'#e07b00', size:12}));
+  (UTS[mk].defects||[]).forEach((d,di)=>lab.push({p:M.o.clone().addScaledVector(M.a, sFromPos(mk, d.pos)).add(M.side.clone().multiplyScalar(-2.4)), text:defId(di), color:'#d62828', bold:true, size:13}));
+  lab.push({p:M.o.clone().addScaledVector(M.a, s1 + 0.5).add(M.side.clone().multiplyScalar(-1.6)), text:(UTS[mk].id || mk), color:'#002060', bold:true, size:14});
+  // only this member's reading points: collapse the others' instances for the shot; draw this member's rings explicitly
+  const keepMx = PTS ? PTS.instanceMatrix.array.slice() : null, zero = new THREE.Matrix4().makeScale(0,0,0);
+  const ringMeshes = list.map(R=>{ const t = new THREE.Mesh(new THREE.TorusGeometry(M.r+0.004, 0.008, 6, 32), new THREE.MeshBasicMaterial({color:0x1d1f24}));
+    t.position.copy(M.o.clone().addScaledVector(M.a, R.s)); t.quaternion.setFromUnitVectors(V(0,0,1), M.a); return t; });
+  const rWas = RINGI ? RINGI.visible : true;
+  return snapshot({pos:p1, tgt:t1, w, h, fade:0.35, hide:['zones','orient','deck','mid','scope','jetty'], show:['rings','defx','context'], labels:lab, extra:ringMeshes, k,
+    before:()=>{ if(PTS){ INST.forEach((p,i)=>{ if(p.mk!==mk) PTS.setMatrixAt(i, zero); }); PTS.instanceMatrix.needsUpdate = true; } if(RINGI) RINGI.visible = false; },
+    after:()=>{ if(PTS && keepMx){ PTS.instanceMatrix.array.set(keepMx); PTS.instanceMatrix.needsUpdate = true; } if(RINGI) RINGI.visible = rWas; }});
+}
+// 3 — one defect: grid stations around the defect, viewed square-on to its clock position
+function snapDefect(mk, di, w, h, k){
+  const d = UTS[mk].defects[di], M = MEM[mk], r = genDefect(mk, d), t1 = M.o.clone().addScaledVector(M.a, r.sc);
+  const n = clockPos(t1, M.f, M.u, 1, r.kc).sub(t1).normalize();
+  const span = Math.max(1.2, (r.stations.length ? Math.abs(nth(r.stations, r.stations.length-1).s - r.stations[0].s) : 1)*1.9);
+  const p1 = t1.clone().addScaledVector(n, span).add(V(0, 0.18, 0));
+  const lab = [];
+  const firstOf = z => r.stations.find(st=>st.zone===z), lastOf = z => r.stations.slice().reverse().find(st=>st.zone===z);
+  [['Landing A', '#b08a00'], ['Defect', '#d62828'], ['Landing B', '#b08a00']].forEach(([z,col])=>{ const a = firstOf(z), b2 = lastOf(z); if(!a) return;
+    lab.push({p:M.o.clone().addScaledVector(M.a, a.s).add(M.side.clone().multiplyScalar(1.4)), text:a.id, color:col, size:12});
+    if(b2 && b2!==a) lab.push({p:M.o.clone().addScaledVector(M.a, b2.s).add(M.side.clone().multiplyScalar(1.4)), text:b2.id, color:col, size:12}); });
+  lab.push({p:clockPos(t1, M.f, M.u, M.r*1.8, r.kc), text:`${defId(di)} · ${fmtK(r.kc)} o'clock`, color:'#d62828', bold:true, size:14});
+  const keep = activeDef;
+  return snapshot({pos:p1, tgt:t1, w, h, fade:0.3, hide:['zones','orient','deck','mid','scope','jetty','rings'], show:['defx','context'], labels:lab, k,
+    before:()=>{ activeDef = di; buildDefects(); }, after:()=>{ activeDef = keep; buildDefects(); }});
+}
+const imgOf = (wb, url) => wb.addImage({base64:url, extension:'png'});
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+    s.onload=()=>res(window.JSZip); s.onerror=()=>rej(new Error('zip library unavailable')); document.head.appendChild(s); });
+}
+// Excel "Place in Cell" pictures (Excel 365 / 2021+): ExcelJS writes a numeric sentinel in each picture cell; this swaps it for a rich-value image.
+const IMG_SENTINEL = 987650;
+async function placePicturesInCells(buf, imgs){
+  const zip = await window.JSZip.loadAsync(buf), n = imgs.length, NS = 'http://schemas.microsoft.com/office/spreadsheetml/2017/richdata', X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  const sheets = {};
+  for(let i=0;i<n;i++){ const it = nth(imgs, i), f = `xl/worksheets/sheet${it.sheetId}.xml`;
+    if(!(f in sheets)) sheets[f] = await zip.file(f).async('string');
+    const re = new RegExp(`<c r="${it.ref}"((?: s="\\d+")?)(?: t="n")?><v>${IMG_SENTINEL + i}</v></c>`);
+    if(!re.test(sheets[f])) throw new Error('picture cell ' + it.ref + ' not found');
+    sheets[f] = sheets[f].replace(re, `<c r="${it.ref}"$1 t="e" vm="${i+1}"><v>#VALUE!</v></c>`);
+    zip.file(`xl/media/cellpic${i+1}.png`, it.url.split(',').pop(), {base64:true}); }
+  Object.entries(sheets).forEach(([f,x])=>zip.file(f, x));
+  const idx = [...Array(n).keys()];
+  zip.file('xl/metadata.xml', X + `<metadata xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xlrd="${NS}"><metadataTypes count="1"><metadataType name="XLRICHVALUE" minSupportedVersion="120000" copy="1" pasteAll="1" pasteValues="1" merge="1" splitFirst="1" rowColShift="1" clearFormats="1" clearComments="1" assign="1" coerce="1"/></metadataTypes>`
+    + `<futureMetadata name="XLRICHVALUE" count="${n}">` + idx.map(i=>`<bk><extLst><ext uri="{3e2802c4-a4d2-4d8b-9148-e3be6c30e623}"><xlrd:rvb i="${i}"/></ext></extLst></bk>`).join('') + `</futureMetadata>`
+    + `<valueMetadata count="${n}">` + idx.map(i=>`<bk><rc t="1" v="${i}"/></bk>`).join('') + `</valueMetadata></metadata>`);
+  zip.file('xl/richData/rdrichvalue.xml', X + `<rvData xmlns="${NS}" count="${n}">` + idx.map(i=>`<rv s="0"><v>${i}</v><v>5</v></rv>`).join('') + `</rvData>`);
+  zip.file('xl/richData/rdrichvaluestructure.xml', X + `<rvStructures xmlns="${NS}" count="1"><s t="_localImage"><k n="_rvRel:LocalImageIdentifier" t="i"/><k n="CalcOrigin" t="i"/></s></rvStructures>`);
+  zip.file('xl/richData/rdRichValueTypes.xml', X + `<rvTypesInfo xmlns="http://schemas.microsoft.com/office/spreadsheetml/2017/richdata2" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x" xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><global><keyFlags>`
+    + `<key name="_Self"><flag name="ExcludeFromFile" value="1"/><flag name="ExcludeFromCalcComparison" value="1"/></key>`
+    + ['_DisplayString','_Flags','_Format','_SubLabel','_Attribution','_Icon','_Display','_CanonicalPropertyNames','_ClassificationId'].map(k=>`<key name="${k}"><flag name="ExcludeFromCalcComparison" value="1"/></key>`).join('')
+    + `</keyFlags></global></rvTypesInfo>`);
+  zip.file('xl/richData/richValueRel.xml', X + `<richValueRels xmlns="http://schemas.microsoft.com/office/spreadsheetml/2022/richvaluerel" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` + idx.map(i=>`<rel r:id="rId${i+1}"/>`).join('') + `</richValueRels>`);
+  zip.file('xl/richData/_rels/richValueRel.xml.rels', X + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` + idx.map(i=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/cellpic${i+1}.png"/>`).join('') + `</Relationships>`);
+  let rels = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+  rels = rels.replace('</Relationships>', `<Relationship Id="rIdFmMeta" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata" Target="metadata.xml"/>`
+    + `<Relationship Id="rIdFmRvRel" Type="http://schemas.microsoft.com/office/2022/10/relationships/richValueRel" Target="richData/richValueRel.xml"/>`
+    + `<Relationship Id="rIdFmRv" Type="http://schemas.microsoft.com/office/2017/06/relationships/rdRichValue" Target="richData/rdrichvalue.xml"/>`
+    + `<Relationship Id="rIdFmRvS" Type="http://schemas.microsoft.com/office/2017/06/relationships/rdRichValueStructure" Target="richData/rdrichvaluestructure.xml"/>`
+    + `<Relationship Id="rIdFmRvT" Type="http://schemas.microsoft.com/office/2017/06/relationships/rdRichValueTypes" Target="richData/rdRichValueTypes.xml"/></Relationships>`);
+  zip.file('xl/_rels/workbook.xml.rels', rels);
+  let ct = await zip.file('[Content_Types].xml').async('string');
+  if(!/Extension="png"/.test(ct)) ct = ct.replace(/(<Types[^>]*>)/, '$1<Default Extension="png" ContentType="image/png"/>');
+  ct = ct.replace('</Types>', `<Override PartName="/xl/metadata.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml"/>`
+    + `<Override PartName="/xl/richData/richValueRel.xml" ContentType="application/vnd.ms-excel.richvaluerel+xml"/>`
+    + `<Override PartName="/xl/richData/rdrichvalue.xml" ContentType="application/vnd.ms-excel.rdrichvalue+xml"/>`
+    + `<Override PartName="/xl/richData/rdrichvaluestructure.xml" ContentType="application/vnd.ms-excel.rdrichvaluestructure+xml"/>`
+    + `<Override PartName="/xl/richData/rdRichValueTypes.xml" ContentType="application/vnd.ms-excel.rdrichvaluetypes+xml"/></Types>`);
+  zip.file('[Content_Types].xml', ct);
+  return zip.generateAsync({type:'uint8array', compression:'DEFLATE'});
+}
+
+async function exportUtReport(){
+  const mk = UTS.active, m = UTS[mk], M = MEM[mk], c = UTS.common || {};
+  const ExcelJS = await loadExcelJS().catch(e=>{ toast('Could not export: ' + e.message, true); return null; }); if(!ExcelJS) return;
+  const STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL';
+  const STRUCT_NAME = STRUCT==='NSL' ? 'NSL — North Ship Loader (North Arm Pierhead)' : 'SSL — South Ship Loader';
+  const id = m.id || autoId(mk), nomWT = num(m.wt), ffs = num(m.ffs), elev = M.kind==='elev';
+  const list = ringsFor(mk), mv = movedMap(mk), xs = (m.extra||[]).slice().sort((a,b)=>sFromPos(mk,a.pos)-sFromPos(mk,b.pos));
+  const defs = m.defects || [];
+  const inCellOK = await loadJSZip().then(()=>true, ()=>false);
+  const CELLPICS = [];
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Franmarine Underwater Services Pty Ltd'; wb.created = new Date();
+  const logoId = wb.addImage({base64:FM_LOGO, extension:'png'});
+  const NAVY = 'FF002060', GREY = 'FFFFFFFF', LINE = {style:'thin', color:{argb:'FF000000'}}, BOX = {top:LINE, left:LINE, bottom:LINE, right:LINE};   // Franmarine style: Calibri, navy labels on white, black thin borders
+  const RED = 'FFF8D0D0', AMB = 'FFFCE9C8';
+  const setup = (ws, cols, logoAt) => { ws.columns = cols.map(w=>({width:w}));
+    ws.pageSetup = {paperSize:9, orientation:'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, horizontalCentered:true,
+      margins:{left:0.4, right:0.4, top:0.5, bottom:0.6, header:0.25, footer:0.3}};
+    ws.headerFooter.oddFooter = `&C&"Calibri"&9UNCONTROLLED WHEN PRINTED | Page &P of &N`;
+    ws.addImage(logoId, {tl:logoAt || {col:cols.length - 2.6, row:0.15}, ext:{width:150, height:46}}); };
+  const cell = (ws, ref, v, o) => { const x = ws.getCell(ref); x.value = v===undefined || v===null ? '' : v; o = o || {};
+    x.font = {name:'Calibri', size:o.size||9.5, bold:!!o.bold, color:o.color ? {argb:o.color} : (o.fill===GREY && o.bold ? {argb:NAVY} : undefined)};
+    x.alignment = {vertical:'middle', horizontal:o.h||'left', wrapText:o.wrap!==false};
+    if(o.fill) x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:o.fill}};
+    if(o.box!==false) x.border = BOX; if(o.fmt) x.numFmt = o.fmt; return x; };
+  const merge = (ws, r) => { try{ ws.mergeCells(r); }catch(e){} };
+  const CAP = {top:LINE, left:LINE, right:LINE};   // picture caption: no bottom border (picture box below)
+  // picture placed in a merged cell range (Excel "Place in Cell"); floating picture if the zip library is unavailable
+  const picture = (ws, rng, url, w, hpx) => { merge(ws, rng); const ref = rng.split(':')[0];
+    if(inCellOK){ cell(ws, ref, IMG_SENTINEL + CELLPICS.length, {h:'center'}); CELLPICS.push({sheetId:ws.id, ref, url}); }
+    else { cell(ws, ref, '', {}); const c0 = ws.getCell(ref).col - 1, r0 = +ref.replace(/[A-Z]+/,'') - 1; ws.addImage(imgOf(wb, url), {tl:{col:c0 + 0.1, row:r0 + 0.15}, ext:{width:w, height:hpx}}); } };
+  const val = v => num(v);
+  const red = v => { const x = val(v); return x===null || nomWT===null ? ['',''] : [+(nomWT - x).toFixed(1), +((nomWT - x)/nomWT*100).toFixed(1)]; };
+  const flag = v => { const k = readingClass(mk, v); return k==='low' ? 'BELOW FFS' : k==='high' ? 'Over nominal +10% — verified?' : ''; };
+  const title = (ws, text, sub) => {
+    merge(ws, 'A1:H1'); cell(ws, 'A1', text, {size:14, bold:true, box:false, color:NAVY});
+    merge(ws, 'A2:H2'); cell(ws, 'A2', sub, {size:9.5, box:false, color:NAVY});
+    ws.getRow(1).height = 24; ws.getRow(2).height = 18; ws.getRow(3).height = 8; };
+
+  // ---------- Report sheet
+  const ws = wb.addWorksheet('Report'); setup(ws, [6, 20, 11, 8, 8, 8, 8, 7, 8, 7, 22]);
+  title(ws, 'ULTRASONIC THICKNESS TESTING REPORT', `Report No. F12221-UTR-${id} · F12221 CIP Structural Remediation`);
+  const ext = elev ? `${posLabel(mk, list.length ? list[0].s : M.p0.y)} to ${posLabel(mk, list.length ? nth(list, list.length-1).s : M.p1.y)} (rel. LAT)` : `0 to ${m.length || M.len} mm from datum`;
+  const left = [['Client','Christmas Island Phosphates'], ['Client reference','CIP-MAR-INF-SOW-2026-001 Rev 0'], ['Structure', STRUCT_NAME], ['Member ID', id],
+    ['Description', shortName(mk)], ['Member type', `${M.type} · ${M.orient}`], ['Survey extent', ext], ['Date of inspection', c.date||''],
+    ['Acceptance criteria', ffs!==null ? `Fit-for-service limit ${ffs} mm; readings > nominal +10% re-tested` : 'Fit-for-service limit [TBC]']];
+  const right = [['UT unit', c.unit||''], ['Serial / equip. ID', [c.serial, c.equip].filter(Boolean).join(' / ')], ['Probe size / freq.', c.probe||''],
+    ['Calibration block', c.calblock||''], ['Couplant', c.couplant||''], ['Technique', c.technique||''], ['Procedure', 'AS 2452.3 · FZ-GDN UT Inspection Rev 0'],
+    ['Surface condition', c.surface||''], ['Nominal OD / WT', `${m.od||'—'} / ${m.wt||'—'} mm`]];
+  left.forEach(([l,v],i)=>{ const r = 4+i;
+    merge(ws, `A${r}:B${r}`); merge(ws, `C${r}:E${r}`); merge(ws, `F${r}:G${r}`); merge(ws, `H${r}:K${r}`);
+    cell(ws, `A${r}`, l, {bold:true, fill:GREY}); cell(ws, `C${r}`, v);
+    const [rl, rv] = nth(right, i); cell(ws, `F${r}`, rl, {bold:true, fill:GREY}); cell(ws, `H${r}`, rv);
+    const lines = Math.max(Math.ceil(String(v).length / 30), Math.ceil(String(rv).length / 44), 1); ws.getRow(r).height = 4 + 12*lines; });
+  // pictures: where the member is, and the member itself
+  let r = 4 + left.length + 1;
+  { const loc = snapLocation(mk, 760, 640, 2), mem = snapMember(mk, 860, 640, 2);
+    merge(ws, `A${r}:E${r}`); cell(ws, `A${r}`, 'LOCATION ON THE STRUCTURE', {bold:true, fill:GREY, h:'center'}).border = CAP;
+    merge(ws, `F${r}:K${r}`); cell(ws, `F${r}`, 'MEMBER — rings / reading points (blue no reading, green OK, red below FFS)', {bold:true, fill:GREY, h:'center'}).border = CAP;
+    picture(ws, `A${r+1}:E${r+16}`, loc, 380, 320); picture(ws, `F${r+1}:K${r+16}`, mem, 425, 320);
+    for(let i=1;i<=16;i++) ws.getRow(r+i).height = 15;
+    r += 18; }
+  // results table
+  const H1 = r, H2 = r+1;
+  [['A','Item'],['B','Identification (point ID)'],['C', elev ? 'Elevation (m LAT)' : 'Position (mm)'],['D','Nominal WT (mm)']].forEach(([col,t])=>{ merge(ws, `${col}${H1}:${col}${H2}`); cell(ws, `${col}${H1}`, t, {bold:true, h:'center', fill:GREY}); });
+  merge(ws, `E${H1}:F${H1}`); cell(ws, `E${H1}`, 'Gauge reading (mm)', {bold:true, h:'center', fill:GREY});
+  merge(ws, `G${H1}:J${H1}`); cell(ws, `G${H1}`, 'Wall thickness reduction', {bold:true, h:'center', fill:GREY});
+  merge(ws, `K${H1}:K${H2}`); cell(ws, `K${H1}`, 'Remarks', {bold:true, h:'center', fill:GREY});
+  [['E','Min'],['F','Max'],['G','Least mm'],['H','%'],['I','Most mm'],['J','%']].forEach(([col,t])=>cell(ws, `${col}${H2}`, t, {bold:true, h:'center', fill:GREY}));
+  r = H2 + 1;
+  let all = [];   // [value, point id]
+  const row = (item, ident, pos, vals, remark) => {
+    const v = vals.map(val).filter(x=>x!==null), mn = v.length ? Math.min(...v) : null, mx = v.length ? Math.max(...v) : null;
+    const [lr, lp] = red(mx), [hr, hp] = red(mn), f = mn!==null ? flag(mn) : '';
+    [['A',item,'center'],['B',ident],['C',pos,'center'],['D',nomWT===null?'':nomWT,'center'],['E',mn===null?'':mn,'center'],['F',mx===null?'':mx,'center'],
+     ['G',lr,'center'],['H',lp,'center'],['I',hr,'center'],['J',hp,'center'],['K',[f, remark].filter(Boolean).join(' — ')]].forEach(([col,v,h])=>{
+      const x = cell(ws, `${col}${r}`, v, {h:h||'left', size:8.5});
+      if(f==='BELOW FFS' && ['E','I','J','K'].includes(col)) x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:RED}};
+      else if(f && col==='K') x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:AMB}}; });
+    r++; };
+  list.forEach((R,i)=>{ const rd = m.readings[R.key]||{}, ids = [PID_STRUCT, mk, pidRingTag(mk, R.key)].join('/');
+    const vals = KS.map(k=>rd[k]); vals.forEach((v,j)=>{ if(val(v)!==null) all.push([val(v), pidRing(mk, R.key, nth(KS,j))]); });
+    const moved = KS.filter(k=>mv[jk(R.key,k)]).map(k=>`${KNAME(k)} o'clock moved to ${xLabel(mv[jk(R.key,k)])}`);
+    row(`R${String(i+1).padStart(2,'0')}`, ids, R.label.replace(' mm','').replace(' m',''), vals, [(m.remarks||{})[R.key]||'', ...moved].filter(Boolean).join('; ')); });
+  xs.forEach(x=>{ const v = val(x.val); if(v!==null) all.push([v, pidAP(mk, x)]);
+    row(xLabel(x), pidAP(mk, x), xPosLabel(mk, x).replace(' mm','').replace(' m',''), [x.val], [`${fmtK(+x.clock)} o'clock`, x.from ? 'replaces ' + xFromLabel(mk, x) : '', x.note||''].filter(Boolean).join(' — ')); });
+  defs.forEach((d,di)=>{ const g = genDefect(mk, d), vals = [];
+    g.stations.forEach(st=>{ for(let k=0;k<12;k++){ const v = dVal(d, st.id, k); if(val(v)!==null){ vals.push(v); all.push([val(v), pidDef(mk, di, st.id, k)]); } } });
+    Object.entries(d.edge||{}).forEach(([t,v])=>{ if(val(v)!==null){ vals.push(v); all.push([val(v), pidDef(mk, di, 'edge:'+t, 0)]); } });
+    if(d.pit && val(d.pit.rem)!==null){ vals.push(d.pit.rem); all.push([val(d.pit.rem), pidDef(mk, di, 'pit', 0)]); }
+    row(defId(di), [PID_STRUCT, mk, defId(di).replace('-','')].join('/'), posLabel(mk, sFromPos(mk, d.pos)).replace(' mm','').replace(' m',''), vals,
+      `${DTYPES[d.type].label}, ${fmtK(+d.clock)} o'clock — see sheet ${defId(di)}`); });
+  if(r === H2 + 1){ merge(ws, `A${r}:K${r}`); cell(ws, `A${r}`, 'No readings recorded.', {h:'center'}); r++; }
+  // result line
+  r++;
+  const mn = all.length ? all.reduce((a,b)=>b[0] < a[0] ? b : a) : null, nLow = ffs===null ? 0 : all.filter(a=>a[0] < ffs).length;
+  merge(ws, `A${r}:K${r}`);
+  cell(ws, `A${r}`, mn ? `RESULT — minimum reading ${mn[0]} mm at ${mn[1]}${nomWT!==null ? ` (${((nomWT-mn[0])/nomWT*100).toFixed(1)}% loss)` : ''} · ${all.length} readings · ${nLow} below the fit-for-service limit · ${defs.length} defect${defs.length===1?'':'s'} recorded`
+                     : 'RESULT — no readings recorded', {bold:true, fill: nLow ? RED : 'FFE6F2E6'});
+  ws.getRow(r).height = 20; r += 2;
+  // sign-off
+  const SIG = [['A','D','Performed / evaluated by', `UT operator: ${c.operator||''}${c.cert ? ' · cert ' + c.cert : ''}`], ['E','H','Witnessed by', 'CIP / FUZE representative (if required)'], ['I','K','Reviewed / approved by', 'Franmarine Project Manager / QA']];
+  SIG.forEach(([a,b,t,sub])=>{ merge(ws, `${a}${r}:${b}${r}`); cell(ws, `${a}${r}`, t, {bold:true, fill:GREY});
+    merge(ws, `${a}${r+1}:${b}${r+3}`); cell(ws, `${a}${r+1}`, 'Name:\nSignature:\nDate:', {size:8.5});
+    ws.getCell(`${a}${r+1}`).alignment = {vertical:'top', wrapText:true};
+    merge(ws, `${a}${r+4}:${b}${r+4}`); cell(ws, `${a}${r+4}`, sub, {size:7.5, h:'center', color:NAVY}); });
+  [r+1,r+2,r+3].forEach(n=>ws.getRow(n).height = 16);
+  r += 5;
+  merge(ws, `A${r}:K${r+1}`); ws.getRow(r+1).height = 18;
+  cell(ws, `A${r}`, 'Point IDs are written on the member at each reading and used in photo file names: <Member ID>_<point or defect ID>_<n>.jpg. Individual clock readings are on the Readings sheet; defect grids on the D-S sheets.', {size:7.5, box:false, color:NAVY, h:'center'}).border = {top:LINE};
+
+  // ---------- Readings sheet
+  const rs = wb.addWorksheet('Readings'); setup(rs, [7, 24, 11, 9, 9, 9, 9, 8, 26, 4, 4], {col:8.11, row:0.46});
+  merge(rs, 'A3:H3'); cell(rs, 'A3', 'UT READINGS BY CLOCK POSITION', {size:14, bold:true, box:false, color:NAVY});
+  merge(rs, 'A4:I5'); cell(rs, 'A4', `${id} · ${shortName(mk)} · readings in mm · red = below fit-for-service limit`, {size:9.5, box:false, color:NAVY});
+  rs.getRow(3).height = 24; rs.getRow(4).height = 24; rs.getRow(5).height = 18; rs.getRow(6).height = 8;
+  let q = 7;
+  const hdr = (cols) => { cols.forEach(([col,t])=>cell(rs, `${col}${q}`, t, {bold:true, h:'center', fill:GREY})); q++; };
+  hdr([['A','Ring'],['B','Point ID (ring)'],['C', elev ? 'Elev. (m LAT)' : 'Pos. (mm)'],['D','12'],['E','3'],['F','6'],['G','9'],['H','Min'],['I','Remarks']]);
+  list.forEach((R,i)=>{ const rd = m.readings[R.key]||{}, vs = KS.map(k=>val(rd[k])), ok = vs.filter(x=>x!==null);
+    cell(rs, `A${q}`, `R${String(i+1).padStart(2,'0')}`, {h:'center'}); cell(rs, `B${q}`, [PID_STRUCT, mk, pidRingTag(mk, R.key)].join('/') + '/…'); cell(rs, `C${q}`, R.label.replace(' mm','').replace(' m',''), {h:'center'});
+    ['D','E','F','G'].forEach((col,j)=>{ const v = nth(vs,j), x = cell(rs, `${col}${q}`, v===null ? (mv[jk(R.key, nth(KS,j))] ? 'moved' : '') : v, {h:'center'}); if(v!==null && readingClass(mk, v)==='low') x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:RED}}; });
+    cell(rs, `H${q}`, ok.length ? Math.min(...ok) : '', {h:'center', bold:true}); cell(rs, `I${q}`, (m.remarks||{})[R.key]||''); q++; });
+  if(xs.length){ q++; hdr([['A','Point'],['B','Point ID'],['C', elev ? 'Elev. (m LAT)' : 'Pos. (mm)'],['D','Clock'],['E','WT (mm)']]); q--; merge(rs, `F${q}:I${q}`); cell(rs, `F${q}`, 'Note', {bold:true, h:'center', fill:GREY}); q++;
+    xs.forEach(x=>{ cell(rs, `A${q}`, xLabel(x), {h:'center'}); cell(rs, `B${q}`, pidAP(mk, x)); cell(rs, `C${q}`, xPosLabel(mk, x).replace(' mm','').replace(' m',''), {h:'center'});
+      cell(rs, `D${q}`, fmtK(+x.clock), {h:'center'}); const v = val(x.val), e = cell(rs, `E${q}`, v===null ? '' : v, {h:'center'}); if(v!==null && readingClass(mk, v)==='low') e.fill = {type:'pattern', pattern:'solid', fgColor:{argb:RED}};
+      merge(rs, `F${q}:I${q}`); cell(rs, `F${q}`, [x.from ? 'replaces ' + xFromLabel(mk, x) : '', x.note||''].filter(Boolean).join(' — ')); q++; }); }
+
+  // ---------- one sheet per defect
+  defs.forEach((d,di)=>{
+    const g = genDefect(mk, d), name = defId(di), ds = wb.addWorksheet(name);
+    setup(ds, [7, 9, ...Array(12).fill(5.6), 7, 7, 14]);
+    const L = 'Q';
+    const t = (ref, v, o) => cell(ds, ref, v, o);
+    merge(ds, 'A1:M1'); t('A1', `DEFECT DETAIL — ${name}`, {size:14, bold:true, box:false, color:NAVY});
+    merge(ds, 'A2:M2'); t('A2', `Report No. F12221-UTR-${id} · ${id} · point IDs ${[PID_STRUCT, mk, name.replace('-','')].join('/')}/<station>/<clock>`, {box:false, color:NAVY});
+    ds.getRow(1).height = 24; ds.getRow(2).height = 18;
+    const size = d.type==='crack' ? `${d.len} mm @ ${d.ang||0}°` : d.type==='pitting' ? `Ø${d.dia} mm${d.depth ? ', ' + d.depth + ' mm deep (gauge)' : ''}` : `${d.ax} × ${d.cw} mm${d.depth ? ', ' + d.depth + ' mm deep' : ''}`;
+    [['Defect type', DTYPES[d.type].label], ['Centre position', posLabel(mk, sFromPos(mk, d.pos))], ["Centre clock", `${fmtK(+d.clock)} o'clock`], ['Size', size], ['Note', d.note||''],
+     ['Grid', `${g.stations.length} stations × 12 positions · landing A / defect zone / landing B`]].forEach(([l,v],i)=>{
+      const rr = 4+i; merge(ds, `A${rr}:C${rr}`); merge(ds, `D${rr}:${L}${rr}`); t(`A${rr}`, l, {bold:true, fill:GREY}); t(`D${rr}`, v); });
+    let rr = 11;
+    { merge(ds, `A${rr}:${L}${rr}`); t(`A${rr}`, `DEFECT ${name} — grid stations (yellow = landing, green = defect zone)`, {bold:true, fill:GREY, h:'center'}).border = CAP;
+      picture(ds, `A${rr+1}:${L}${rr+16}`, snapDefect(mk, di, 1120, 480, 2), 700, 300);
+      for(let i=1;i<=16;i++) ds.getRow(rr+i).height = 15;
+      rr += 17; }
+    t(`A${rr}`, 'Station', {bold:true, h:'center', fill:GREY}); t(`B${rr}`, elev ? 'Elev. (m)' : 'Pos. (mm)', {bold:true, h:'center', fill:GREY});
+    for(let k=0;k<12;k++) t(ds.getColumn(3+k).letter + rr, k===0 ? '12' : String(k), {bold:true, h:'center', fill:GREY});
+    t(`O${rr}`, 'Min', {bold:true, h:'center', fill:GREY}); t(`P${rr}`, '< FFS', {bold:true, h:'center', fill:GREY}); t(`Q${rr}`, 'Zone', {bold:true, h:'center', fill:GREY}); rr++;
+    const zmin = {};
+    g.stations.forEach(st=>{
+      t(`A${rr}`, st.id, {h:'center', bold:true, fill: st.zone==='Defect' ? 'FFE3F1E3' : 'FFFFF6CC'}); t(`B${rr}`, posLabel(mk, st.s).replace(' mm','').replace(' m',''), {h:'center', size:8});
+      const vs = [];
+      for(let k=0;k<12;k++){ const v = val(dVal(d, st.id, k)); if(v!==null) vs.push(v); const x = t(ds.getColumn(3+k).letter + rr, v===null ? '' : v, {h:'center', size:8});
+        if(v!==null && readingClass(mk, v)==='low') x.fill = {type:'pattern', pattern:'solid', fgColor:{argb:RED}}; }
+      const smin = vs.length ? Math.min(...vs) : null; if(smin!==null) zmin[st.zone] = Math.min(zmin[st.zone] ?? 1e9, smin);
+      t(`O${rr}`, smin===null ? '' : smin, {h:'center', bold:true}); t(`P${rr}`, ffs===null ? '' : vs.filter(v=>v < ffs).length, {h:'center'}); t(`Q${rr}`, st.zone, {size:8}); rr++; });
+    // edge / pit readings
+    const ex = [];
+    if(g.extras.edges) ['+ax','−ax','CW','CCW'].forEach(e=>ex.push([`Hole edge ${e}`, (d.edge||{})[e], pidDef(mk, di, 'edge:'+e, 0)]));
+    if(g.extras.pit){ ex.push(['Pit — remaining WT (UT)', (d.pit||{}).rem, pidDef(mk, di, 'pit', 0)]); ['+ax','−ax','CW','CCW'].forEach(e=>ex.push([`Around pit ${e}`, (d.edge||{})[e], pidDef(mk, di, 'edge:'+e, 0)])); }
+    if(ex.length){ rr++; merge(ds, `A${rr}:F${rr}`); t(`A${rr}`, 'Edge / pit readings', {bold:true, fill:GREY}); merge(ds, `G${rr}:H${rr}`); t(`G${rr}`, 'WT (mm)', {bold:true, fill:GREY, h:'center'}); merge(ds, `I${rr}:${L}${rr}`); t(`I${rr}`, 'Point ID', {bold:true, fill:GREY}); rr++;
+      ex.forEach(([l,v,p])=>{ merge(ds, `A${rr}:F${rr}`); merge(ds, `G${rr}:H${rr}`); merge(ds, `I${rr}:${L}${rr}`); t(`A${rr}`, l); t(`G${rr}`, val(v)===null ? '' : val(v), {h:'center'}); t(`I${rr}`, p); rr++; }); }
+    // summary
+    rr++; merge(ds, `A${rr}:${L}${rr}`);
+    t(`A${rr}`, `SUMMARY — minimum: landing A ${zmin['Landing A'] ?? '—'} mm · defect zone ${zmin['Defect'] ?? '—'} mm · landing B ${zmin['Landing B'] ?? '—'} mm${g.warn.length ? ' · ' + g.warn.join(' ') : ''}`, {bold:true}); rr += 2;
+    // repair design features (completed on site)
+    merge(ds, `A${rr}:${L}${rr}`); t(`A${rr}`, 'FEATURES AFFECTING REPAIR DESIGN (within the defect and landing extent) — complete on site', {bold:true, fill:GREY}); rr++;
+    ['Distance to nearest weld / node (mm)', 'Attachments in extent (anode, clamp, bracket)', 'Existing repairs in extent (wrap, sleeve, clamp)', 'Full 360° access around member (Y / N); min radial clearance (mm)', 'Photos (file names)'].forEach(l=>{
+      merge(ds, `A${rr}:G${rr}`); merge(ds, `H${rr}:${L}${rr}`); t(`A${rr}`, l, {size:8.5}); t(`H${rr}`, ''); ds.getRow(rr).height = 18; rr++; });
+  });
+
+  let out = await wb.xlsx.writeBuffer();
+  if(CELLPICS.length) out = await placePicturesInCells(out, CELLPICS);
+  await saveFile(`F12221-UTR-${String(id).replace(/[^\w.-]+/g,'_')}.xlsx`, new Blob([out]));
+  $('export-note').textContent = `UT report: ${id} — ${list.length} rings, ${xs.length} additional point${xs.length===1?'':'s'}, ${defs.length} defect sheet${defs.length===1?'':'s'}.`;
+}
+$('btn-utr').addEventListener('click', ()=>exportUtReport().catch(e=>toast('Could not export the UT report: ' + (e && e.message || e), true)));
 
 // ---------- PERSISTENCE: Supabase (live shared data, sign-in, roles) with localStorage as the offline / unconfigured fallback
 // Table public.members holds one row per (structure, member_key) → data (that member's readings, defects, points); member_key '__common__' holds
