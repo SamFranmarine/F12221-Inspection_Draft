@@ -2920,6 +2920,7 @@ const persistence = (function(){
   const P = { mode:'local', online:navigator.onLine !== false, role:null, staff:false, email:'', client:null,
               base:{}, ver:{}, pending:new Set(), saving:false, applyingRemote:false, chan:null };
   const js = o => JSON.stringify(o);
+  const dc = o => o===undefined ? o : JSON.parse(JSON.stringify(o));   // deep copy: the 'last saved' copy must never share objects with the live data, or edits look unchanged and never save
   function canon(v){
     if(Array.isArray(v)) return v.map(canon);
     if(v && typeof v==='object'){ const o = {}; Object.keys(v).sort().forEach(k=>{ const c = canon(v[k]);
@@ -3003,7 +3004,7 @@ const persistence = (function(){
     if(error){ fail('Could not load the team data: ' + error.message); return false; }
     const d = {active:UTS.active, common:{}};
     P.base = {}; P.ver = {};
-    (data||[]).forEach(r=>{ P.base[r.member_key] = r.data; P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = r.data; else d[r.member_key] = r.data; });
+    (data||[]).forEach(r=>{ P.base[r.member_key] = dc(r.data); P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = dc(r.data); else d[r.member_key] = dc(r.data); });
     P.applyingRemote = true;
     try{ UTS = mergeState(d); try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} refreshUI(); }
     finally{ P.applyingRemote = false; }
@@ -3040,12 +3041,13 @@ const persistence = (function(){
     const g = await P.client.from('members').select('data,version').eq('structure', STRUCT).eq('member_key', k).maybeSingle();
     if(g.error || !g.data){ fail('Could not re-read ' + k + ' after a clash: ' + ((g.error && g.error.message) || 'not found')); return false; }
     const merged = merge3(P.base[k] || {}, mine, g.data.data);
-    P.base[k] = g.data.data; P.ver[k] = g.data.version;
+    P.base[k] = dc(g.data.data); P.ver[k] = g.data.version;
     applyMember(k, merged);
     if(attempt) { applyMember(k, g.data.data); toast('A teammate saved ' + k + ' at the same moment — their version was kept. Check your last entry.', true); return false; }
     return saveOne(k, true);
   }
   function applyMember(k, data){
+    data = dc(data);
     P.applyingRemote = true;
     try{
       if(k===COMMON) UTS.common = Object.assign({}, DEFAULTS.common, data);
@@ -3058,7 +3060,7 @@ const persistence = (function(){
     const k = row.member_key; if(P.ver[k]!==undefined && row.version <= P.ver[k]) return;
     const mine = cur(k), base = P.base[k];
     const dirty = mine && (base===undefined ? !same(mine, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(mine, base));
-    P.base[k] = row.data; P.ver[k] = row.version;
+    P.base[k] = dc(row.data); P.ver[k] = row.version;
     applyMember(k, dirty ? merge3(base || {}, mine, row.data) : row.data);
     if(dirty) schedule(400);
     refreshUI();
