@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>*,*::before,*::after{box-sizing:border-box}[hidden]{display:none!important}header a.home{font:600 11px var(--font-mono);color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:3px;padding:2px 6px}
+
+.g-info{display:block;margin-top:2px}
+.g-def{font:600 10px var(--font-mono);color:var(--accent);margin-left:4px}
+#g-manage{margin-top:4px}
 </style>
 <title>NSL Inspection ITP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1041,7 +1045,7 @@ const KS = [0,3,6,9];
 const KNAME = k => k===0 ? '12' : String(k);
 const cviAct = new THREE.MeshBasicMaterial({color:0x2f8cff, transparent:true, opacity:.28, side:THREE.DoubleSide, depthWrite:false});
 
-const DEFAULTS = { active:'P29-S2', common:{date:'', operator:'', cert:'', equip:'', hat:1.4} };
+const DEFAULTS = { active:'P29-S2', common:{date:'', operator:'', cert:'', equip:'', hat:1.4}, project:{gauges:[]} };
 // Member ID (ITP document number F12221-ITP-002-<id>): filled automatically as structure + tool ID, e.g. NSL-P29-S2; editable, and clearing it restores the default
 const autoId = k => `NSL-${k}`;
 const shortName = k => MEM[k].name.startsWith(k + ' — ') ? MEM[k].name.slice(k.length + 3) : MEM[k].name;
@@ -1079,6 +1083,7 @@ function mergeState(d){
   if(d && typeof d==='object'){
     if(MKEYS.includes(d.active)) st.active = d.active;
     Object.assign(st.common, d.common||{});
+    if(d.project && typeof d.project==='object') st.project = Object.assign({gauges:[]}, d.project);
     MKEYS.forEach(k=>{ if(d[k]) { Object.assign(st[k], d[k]); st[k].readings = d[k].readings||{}; st[k].remarks = d[k].remarks||{}; } });
   }
   MKEYS.forEach(k=>{ if(!String(st[k].id||'').trim()) st[k].id = autoId(k); if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
@@ -1273,9 +1278,7 @@ const FIELDS = [
   ['od','Nominal OD (mm)','num'], ['wt','Nominal WT (mm)','num'], ['ffs','Fit-for-service limit (mm)','num'],
 ];
 const EXTENT = { elev:[['bottom','Inspect from — bottom (m LAT)','num'],['top','Inspect to — top (m LAT)','num']], axial:[['length','Length between datum and end (mm)','num']] };
-const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['equip','Equipment ID','text'],['hat','HAT (m rel. LAT)','num'],
-  ['unit','UT unit (make / model)','text'],['serial','UT unit serial no.','text'],['probe','Probe size / frequency','text'],['calblock','Calibration block','text'],
-  ['couplant','Couplant','text'],['technique','Technique','select:,Pulse-echo,Echo-echo (through coating)'],['surface','Surface condition','text']];
+const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['hat','HAT (m rel. LAT)','num'],['surface','Surface condition','text']];
 function fieldEl(scope, [k,label,type]){
   const id = `f-${scope}-${k}`, v = scope==='common' ? UTS.common[k] : UTS[UTS.active][k];
   if(type.startsWith('select:')) return h('label', {for:id}, label, h('select', {id, 'data-scope':scope, 'data-k':k}, type.slice(7).split(',').map(o=>h('option', {selected:o===v}, o))));
@@ -1285,7 +1288,7 @@ function fieldEl(scope, [k,label,type]){
 function renderForm(){
   const mk = UTS.active, M = MEM[mk];
   $('form-member').replaceChildren(...FIELDS.map(f=>fieldEl('member',f)), ...EXTENT[M.kind].map(f=>fieldEl('member',f)));
-  $('form-common').replaceChildren(...COMMON.map(f=>fieldEl('common',f)));
+  $('form-common').replaceChildren(...COMMON.map(f=>fieldEl('common',f)), gaugeField());
   $('ext-note').textContent = M.kind==='elev'
     ? `Section ${M.section} of the leg, splice to splice: rings on a 500 mm grid referenced to LAT, plus a ring at each end. Modelled ${M.p0.y.toFixed(2)} to ${M.p1.y>=0?'+':''}${M.p1.y.toFixed(2)} m (levels are illustrative) — enter the actual splice / seabed / leg top elevations. Member sizes are not confirmed on the drawings — enter OD and WT. ` + M.datum
     : `Rings every 500 mm from the datum to the end. ${M.datum} Length ${M.len} mm modelled from drawings M26 / M27 — enter the measured length and the member size.`;
@@ -1301,6 +1304,7 @@ function onField(e){
   if(['ffs','wt'].includes(k)){ recolour(UTS.active); restyleTable(); }
   if(k==='hat'){ /* zone only used in ITP */ }
   if(k==='id') renderSummary();
+  if(k==='gauge') renderForm();
   renderSummary();
 }
 $('form-member').addEventListener('change', onField);
@@ -1521,7 +1525,7 @@ $('file-itp').addEventListener('change', async e=>{
     const dt = c.date ? new Date(c.date+'T00:00:00Z') : null;
     if(dt) put(cv,'Date:',CV,dt);
     if(dt) put(ms,'Inspection date',MS,dt);
-    put(ms,'UT operator',MS,c.operator); put(ms,'Operator cert no.',MS,c.cert); put(ms,'Equipment ID',MS,c.equip);
+    put(ms,'UT operator',MS,c.operator); put(ms,'Operator cert no.',MS,c.cert); put(ms,'Equipment ID',MS,gaugeFor(mk).equip);
     put(ms,'Fit-for-service limit',MS,num(m.ffs)); put(ms,'HAT (m rel. LAT)',MS,num(c.hat));
     put(ms,'Ring pitch',MS,500); put(ms,'Positions per ring',MS,4);
     if(MEM[mk].kind==='elev'){ put(ms,'Survey bottom',MS,num(m.bottom)); put(ms,'Survey top',MS,num(m.top)); }
@@ -2371,6 +2375,86 @@ const scDlg = h('div', {class:'ah-confirm sc-dlg', id:'sc-dlg', hidden:true, rol
 document.body.appendChild(scDlg);
 const scCard = scDlg.firstChild;
 function closeDlg(){ scDlg.hidden = true; }
+// ---------- UT gauges: project register (shared by SSL and NSL, stored once in the '__project__' record). Each member uses the project default unless another gauge is picked.
+const GTECH = ['Multiple Echo Mode - Single Element Probes Only', 'Single Echo Mode - Twin Element Probes Only', 'Echo-Echo Mode - Twin Element Probes Only'];
+const GFIELDS = [['equip','Equipment ID / tag','text'],['unit','UT unit (make / model)','text'],['serial','UT unit serial no.','text'],['probe','Probe size / frequency','text'],
+  ['calblock','Calibration block','text'],['couplant','Couplant','text'],['technique','Technique','tech'],['caldue','Calibration due','date'],['note','Note','text']];
+function legacyG(){ return ['equip','unit','serial','probe','calblock','couplant','technique']; }   // functions, not consts: renderForm runs before this part of the script
+function gauges(){ UTS.project = UTS.project || {gauges:[]}; if(!Array.isArray(UTS.project.gauges)) UTS.project.gauges = []; return UTS.project.gauges; }
+function gDefault(){ return gauges().find(g=>g.id===UTS.project.def) || gauges()[0] || null; }
+function gLabel(g){ return [g.equip, g.unit, g.serial ? 's/n ' + g.serial : ''].filter(Boolean).join(' · ') || 'Unnamed gauge'; }
+function gaugeFor(mk){
+  const m = UTS[mk] || {}, g = (m.gauge && gauges().find(x=>x.id===m.gauge)) || gDefault();
+  if(g) return g;
+  const c = UTS.common || {}, o = {}; legacyG().forEach(k=>{ o[k] = c[k] || ''; }); o.caldue = ''; return o;   // before any gauge is recorded: details typed in the old Inspection fields
+}
+function gaugeUsers(id){ return MKEYS.filter(k=>UTS[k] && UTS[k].gauge===id); }
+function gaugeField(){
+  const mk = UTS.active, curG = (UTS[mk] || {}).gauge || '', d = gDefault(), list = gauges();
+  const sel = h('select', {id:'f-member-gauge', 'data-scope':'member', 'data-k':'gauge'},
+    h('option', {value:'', selected:!curG}, d ? `Project default — ${gLabel(d)}` : 'Project default (no gauges recorded yet)'),
+    ...list.map(g=>h('option', {value:g.id, selected:g.id===curG}, gLabel(g))));
+  const g = gaugeFor(mk);
+  const info = [g.probe && 'Probe ' + g.probe, g.technique, g.calblock && 'Cal. block ' + g.calblock, g.couplant && 'Couplant ' + g.couplant, g.caldue && 'Cal. due ' + g.caldue].filter(Boolean).join(' · ');
+  return h('label', {class:'wide', for:'f-member-gauge'}, 'UT gauge used on this member', sel,
+    h('span', {class:'small g-info'}, info || (list.length ? '' : 'Record the project\'s UT gauges once (Manage UT gauges) — every member then uses the default gauge unless you pick another.')),
+    h('button', {type:'button', id:'g-manage', class:'linkbtn'}, 'Manage UT gauges…'));
+}
+function openGaugeDlg(){
+  const ro = document.body.classList.contains('viewer'), list = gauges(), d = gDefault(), c = UTS.common || {};
+  const legacy = !list.length && legacyG().some(k=>c[k]);
+  scCard.replaceChildren(
+    h('h2', {id:'sc-dlg-title'}, 'UT gauges — project register'),
+    h('p', {class:'small'}, 'Record each UT gauge / probe set used on F12221 once. The register is shared by the SSL and NSL tools. Every member uses the default gauge unless a different one is picked on that member, and the gauge details go on its UT report.'),
+    h('table', {class:'ut sc-list'}, h('thead', null, h('tr', null, h('th', null, 'Gauge'), h('th', null, 'Probe / technique'), h('th', null, 'Cal. due'), h('th', null, ''))),
+      h('tbody', null, list.length ? list.map(g=>{ const n = gaugeUsers(g.id).length;
+        return h('tr', null, h('td', null, gLabel(g), g===d ? h('span', {class:'g-def'}, ' DEFAULT') : null, n ? h('span', {class:'small'}, ` · ${n} member${n===1?'':'s'}`) : null),
+          h('td', null, [g.probe, g.technique].filter(Boolean).join(' · ')), h('td', null, g.caldue || ''),
+          h('td', {class:'xact'}, ro || g===d ? null : h('button', {type:'button', class:'g-def-btn', 'data-id':g.id}, 'Make default'),
+            ro ? null : h('button', {type:'button', class:'g-ed', 'data-id':g.id}, 'Edit'), ro ? null : h('button', {type:'button', class:'g-del', 'data-id':g.id}, 'Remove'))); })
+        : h('tr', null, h('td', {colspan:4, class:'empty'}, 'No gauges recorded yet.')))),
+    ro ? null : h('div', {class:'row', style:'justify-content:flex-start'}, h('button', {type:'button', id:'g-new', class:'pri'}, '+ Add gauge'),
+      legacy ? h('button', {type:'button', id:'g-legacy'}, 'Add from the details already entered') : null),
+    h('div', {class:'row'}, h('button', {type:'button', id:'g-close'}, 'Close')));
+  scDlg.hidden = false;
+  $('g-close').onclick = closeDlg;
+  if(ro) return;
+  $('g-new').onclick = ()=>openGaugeEdit(null);
+  if(legacy) $('g-legacy').onclick = ()=>{ const o = {}; legacyG().forEach(k=>{ if(c[k]) o[k] = c[k]; }); openGaugeEdit(null, o); };
+  let delArm = null;
+  scCard.querySelectorAll('button[data-id]').forEach(b=>b.onclick = ()=>{ const id = b.dataset.id;
+    if(b.classList.contains('g-ed')) openGaugeEdit(id);
+    if(b.classList.contains('g-def-btn')){ UTS.project.def = id; saveState(); renderForm(); openGaugeDlg(); toast('Default gauge changed — members without their own gauge now use it.'); }
+    if(b.classList.contains('g-del')){
+      const users = gaugeUsers(id);
+      if(users.length){ toast(`Used on ${users.length} member(s) (${users.slice(0,6).map(autoId).join(', ')}${users.length>6?' …':''}). Pick another gauge on those members first.`, true); return; }
+      if(delArm!==id){ delArm = id; b.textContent = 'Confirm'; b.classList.add('armed'); return; }
+      UTS.project.gauges = gauges().filter(g=>g.id!==id); if(UTS.project.def===id) delete UTS.project.def;
+      saveState(); renderForm(); openGaugeDlg(); toast('Gauge removed.'); } });
+}
+function openGaugeEdit(id, preset){
+  const g = id ? gauges().find(x=>x.id===id) : Object.assign({}, preset || {});
+  const field = ([k,label,type]) => {
+    if(type==='tech'){ const opts = GTECH.includes(g.technique||'') || !g.technique ? GTECH : [g.technique, ...GTECH];
+      return h('label', {class:'wide'}, label, h('select', {id:'ge-' + k}, h('option', {value:''}, '—'), ...opts.map(o=>h('option', {value:o, selected:o===g.technique}, o)))); }
+    return h('label', {class: k==='note' || k==='unit' ? 'wide' : null}, label, h('input', {id:'ge-' + k, type: type==='date' ? 'date' : 'text', value:g[k]||'', autocomplete:'off',
+      placeholder: {equip:'e.g. FM-UT-03', unit:'e.g. Cygnus 6+ / Olympus 38DL Plus', probe:'e.g. 13 mm / 2.25 MHz', calblock:'e.g. 5-step steel block 3–25 mm', couplant:'e.g. Ultragel II / water'}[k] || null})); };
+  scCard.replaceChildren(
+    h('h2', {id:'sc-dlg-title'}, id ? 'Edit gauge' : 'Add gauge'),
+    h('div', {class:'form'}, ...GFIELDS.map(field)),
+    id && gaugeUsers(id).length ? h('p', {class:'small'}, `Changes apply to the ${gaugeUsers(id).length} member(s) that use this gauge, and to every member using the default.`) : null,
+    h('div', {class:'row'}, h('button', {type:'button', id:'ge-back'}, 'Back'), h('button', {type:'button', id:'ge-ok', class:'pri'}, 'Save gauge')));
+  $('ge-equip').focus();
+  $('ge-back').onclick = openGaugeDlg;
+  $('ge-ok').onclick = ()=>{
+    const v = {}; GFIELDS.forEach(([k])=>{ const x = $('ge-' + k).value.trim(); if(x) v[k] = x; });
+    if(!v.equip && !v.unit && !v.serial){ toast('Enter at least the equipment ID, unit or serial number.', true); return; }
+    if(id){ GFIELDS.forEach(([k])=>{ delete g[k]; }); Object.assign(g, v); }
+    else { const nid = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); gauges().push(Object.assign({id:nid}, v)); if(!UTS.project.def) UTS.project.def = nid; }
+    saveState(); renderForm(); openGaugeDlg(); toast('Gauge saved.'); };
+}
+$('form-common').addEventListener('click', e=>{ if(e.target && e.target.id==='g-manage') openGaugeDlg(); });
+
 scDlg.addEventListener('click', e=>{ if(e.target===scDlg) closeDlg(); });
 window.addEventListener('keydown', e=>{ if(e.key==='Escape' && !scDlg.hidden) closeDlg(); });
 function catSelect(id, cur){ return h('select', {id}, Object.entries(SCOPE_CATS).map(([k,c])=>h('option', {value:k, selected:k===(cur||'repair')}, c.label))); }
@@ -2640,7 +2724,7 @@ function exportAllCsv(){
   const rows = [head]; let nPts = 0, nMem = 0, nDef = 0;
   MKEYS.forEach(k=>{
     const m = UTS[k], M = MEM[k], base = [STRUCT, m.id || k, k, M.group, shortName ? shortName(k) : M.name, m.od||'', m.wt||'', m.ffs||''];
-    const tail = [scopeNames(k), c.date||'', c.operator||'', c.cert||'', c.equip||''];
+    const tail = [scopeNames(k), c.date||'', c.operator||'', c.cert||'', gaugeFor(k).equip||''];
     const pts = pointRegister(k).filter(r=>r[5]!==null && r[5]!==undefined);
     const defs = m.defects || [];
     if(!pts.length && !defs.length) return;
@@ -2848,8 +2932,9 @@ async function exportUtReport(){
   const left = [['Client','Christmas Island Phosphates'], ['Client reference','CIP-MAR-INF-SOW-2026-001 Rev 0'], ['Structure', STRUCT_NAME], ['Member ID', id],
     ['Description', shortName(mk)], ['Member type', `${M.type} · ${M.orient}`], ['Survey extent', ext], ['Date of inspection', c.date||''],
     ['Acceptance criteria', ffs!==null ? `Fit-for-service limit ${ffs} mm; readings > nominal +10% re-tested` : 'Fit-for-service limit [TBC]']];
-  const right = [['UT unit', c.unit||''], ['Serial / equip. ID', [c.serial, c.equip].filter(Boolean).join(' / ')], ['Probe size / freq.', c.probe||''],
-    ['Calibration block', c.calblock||''], ['Couplant', c.couplant||''], ['Technique', c.technique||''], ['Procedure', 'AS 2452.3 · FZ-GDN UT Inspection Rev 0'],
+  const gg = gaugeFor(mk);
+  const right = [['UT unit', gg.unit||''], ['Serial / equip. ID', [gg.serial, gg.equip].filter(Boolean).join(' / ') + (gg.caldue ? ' · cal. due ' + gg.caldue : '')], ['Probe size / freq.', gg.probe||''],
+    ['Calibration block', gg.calblock||''], ['Couplant', gg.couplant||''], ['Technique', gg.technique||''], ['Procedure', 'AS 2452.3 · FZ-GDN UT Inspection Rev 0'],
     ['Surface condition', c.surface||''], ['Nominal OD / WT', `${m.od||'—'} / ${m.wt||'—'} mm`]];
   left.forEach(([l,v],i)=>{ const r = 4+i;
     merge(ws, `A${r}:B${r}`); merge(ws, `C${r}:E${r}`); merge(ws, `F${r}:G${r}`); merge(ws, `H${r}:K${r}`);
@@ -2986,7 +3071,8 @@ $('btn-utr').addEventListener('click', ()=>exportUtReport().catch(e=>toast('Coul
 // the shared inspection details. Roles come from the database (my_role): @franmarine.com.au = editor; other addresses must be on the access list
 // (viewer by default, can be promoted to editor in the Access tab by Franmarine staff).
 const persistence = (function(){
-  const CFG = window.F12221_CONFIG || {}, STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', COMMON = '__common__';
+  const CFG = window.F12221_CONFIG || {}, STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', COMMON = '__common__', PROJ = '__project__', PSTRUCT = 'SSL';
+  const sOf = k => k===PROJ ? PSTRUCT : STRUCT, defOf = k => k===COMMON ? DEFAULTS.common : k===PROJ ? DEFAULTS.project : DEFAULTS[k];
   const P = { mode:'local', online:navigator.onLine !== false, role:null, staff:false, email:'', client:null,
               base:{}, ver:{}, pending:new Set(), saving:false, applyingRemote:false, chan:null };
   const js = o => JSON.stringify(o);
@@ -3006,7 +3092,7 @@ const persistence = (function(){
       new Set([...Object.keys(mine), ...Object.keys(theirs)]).forEach(k=>{ const m = merge3(b[k], mine[k], theirs[k]); if(m!==undefined) out[k] = m; }); return out; }
     return mine;   // both changed the same field: the user's own edit wins
   }
-  const cur = k => k===COMMON ? UTS.common : UTS[k];
+  const cur = k => k===COMMON ? UTS.common : k===PROJ ? UTS.project : UTS[k];
 
   // ---- UI: pill, banner, sign-in gate, access tab
   function pill(){
@@ -3072,9 +3158,11 @@ const persistence = (function(){
   async function loadAll(){
     const {data, error} = await P.client.from('members').select('member_key,data,version').eq('structure', STRUCT);
     if(error){ fail('Could not load the team data: ' + error.message); return false; }
+    let rows = data || [];
+    if(STRUCT!==PSTRUCT){ const pr = await P.client.from('members').select('member_key,data,version').eq('structure', PSTRUCT).eq('member_key', PROJ).maybeSingle(); if(!pr.error && pr.data) rows = rows.concat([pr.data]); }
     const d = {active:UTS.active, common:{}};
     P.base = {}; P.ver = {};
-    (data||[]).forEach(r=>{ P.base[r.member_key] = dc(r.data); P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = dc(r.data); else d[r.member_key] = dc(r.data); });
+    rows.forEach(r=>{ P.base[r.member_key] = dc(r.data); P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = dc(r.data); else if(r.member_key===PROJ) d.project = dc(r.data); else d[r.member_key] = dc(r.data); });
     P.applyingRemote = true;
     try{ UTS = mergeState(d); try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} refreshUI(); }
     finally{ P.applyingRemote = false; }
@@ -3082,9 +3170,9 @@ const persistence = (function(){
   }
   function changedKeys(){
     const out = [];
-    [COMMON, ...MKEYS].forEach(k=>{ const v = cur(k); if(!v) return;
+    [COMMON, PROJ, ...MKEYS].forEach(k=>{ const v = cur(k); if(!v) return;
       const b = P.base[k];
-      if(b===undefined ? !same(v, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(v, b)) out.push(k); });
+      if(b===undefined ? !same(v, defOf(k)) : !same(v, b)) out.push(k); });
     return out;
   }
   let debT = null;
@@ -3102,13 +3190,13 @@ const persistence = (function(){
   async function saveOne(k, attempt){
     const mine = JSON.parse(js(cur(k)));
     let res;
-    if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:STRUCT, member_key:k, data:mine}).select('version');
-    else res = await P.client.from('members').update({data:mine}).eq('structure', STRUCT).eq('member_key', k).eq('version', P.ver[k]).select('version');
+    if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:sOf(k), member_key:k, data:mine}).select('version');
+    else res = await P.client.from('members').update({data:mine}).eq('structure', sOf(k)).eq('member_key', k).eq('version', P.ver[k]).select('version');
     const ok = !res.error && res.data && res.data.length;
     if(ok){ P.base[k] = mine; P.ver[k] = res.data[0].version; return true; }
-    if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k) + ': ' + res.error.message); return false; }
+    if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k===PROJ ? 'the UT gauge register' : k) + ': ' + res.error.message); return false; }
     // someone else saved this member first: merge the fields this user changed over theirs and try once more
-    const g = await P.client.from('members').select('data,version').eq('structure', STRUCT).eq('member_key', k).maybeSingle();
+    const g = await P.client.from('members').select('data,version').eq('structure', sOf(k)).eq('member_key', k).maybeSingle();
     if(g.error || !g.data){ fail('Could not re-read ' + k + ' after a clash: ' + ((g.error && g.error.message) || 'not found')); return false; }
     const merged = merge3(P.base[k] || {}, mine, g.data.data);
     P.base[k] = dc(g.data.data); P.ver[k] = g.data.version;
@@ -3121,15 +3209,16 @@ const persistence = (function(){
     P.applyingRemote = true;
     try{
       if(k===COMMON) UTS.common = Object.assign({}, DEFAULTS.common, data);
+      else if(k===PROJ) UTS.project = Object.assign({gauges:[]}, data);
       else if(MKEYS.includes(k)){ const st = mergeState({active:UTS.active, common:UTS.common, [k]:data}); UTS[k] = st[k]; }
       try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){}
     } finally { P.applyingRemote = false; }
   }
   function onRemote(row){
-    if(!row || row.structure!==STRUCT) return;
+    if(!row || (row.structure!==STRUCT && row.member_key!==PROJ)) return;
     const k = row.member_key; if(P.ver[k]!==undefined && row.version <= P.ver[k]) return;
     const mine = cur(k), base = P.base[k];
-    const dirty = mine && (base===undefined ? !same(mine, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(mine, base));
+    const dirty = mine && (base===undefined ? !same(mine, defOf(k)) : !same(mine, base));
     P.base[k] = dc(row.data); P.ver[k] = row.version;
     applyMember(k, dirty ? merge3(base || {}, mine, row.data) : row.data);
     if(dirty) schedule(400);
@@ -3139,6 +3228,7 @@ const persistence = (function(){
     if(P.chan) P.client.removeChannel(P.chan);
     P.chan = P.client.channel('members-' + STRUCT)
       .on('postgres_changes', {event:'*', schema:'public', table:'members', filter:'structure=eq.' + STRUCT}, p=>onRemote(p.new))
+      .on('postgres_changes', {event:'*', schema:'public', table:'members', filter:'member_key=eq.' + PROJ}, p=>onRemote(p.new))
       .subscribe(status=>{
         if(status==='SUBSCRIBED'){ if(!P.online){ P.online = true; pill(); loadAll().then(()=>flush()); } }
         else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){ P.online = false; pill(); }
