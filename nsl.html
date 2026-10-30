@@ -1,9 +1,5 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>*,*::before,*::after{box-sizing:border-box}[hidden]{display:none!important}header a.home{font:600 11px var(--font-mono);color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:3px;padding:2px 6px}
-
-.g-info{display:block;margin-top:2px}
-.g-def{font:600 10px var(--font-mono);color:var(--accent);margin-left:4px}
-#g-manage{margin-top:4px}
 </style>
 <title>NSL Inspection ITP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -359,6 +355,127 @@ table.ut tbody tr:hover{background:rgba(11,92,173,.04)}
   .pop{width:min(320px,calc(100% - 16px))}
 }
 </style>
+<style id="ui-2026b">
+/* 2026 refresh, part 2 — status colouring, view controls, hover card, dive mode, validation, history, tidy header, single sync indicator. */
+/* header: two-line title, doc number chip */
+header .ttl{flex-direction:column;align-items:flex-start;gap:1px;justify-content:center}
+header .ttl .t1{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%}
+header .ttl .docno{font:600 10.5px var(--font-mono);color:var(--navy);border:1px solid var(--line);border-radius:4px;padding:1px 6px;white-space:nowrap;flex-shrink:0}
+header .ttl .ref{font-size:11px;max-width:100%}
+header .tips-btn{font:600 12.5px var(--font-ui);padding:7px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;flex-shrink:0}
+header .tips-btn[aria-pressed="true"]{color:var(--navy);border-color:var(--navy)}
+/* single sync indicator */
+.ah-pill{cursor:pointer;user-select:none}
+.ah-pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ah-pill[data-s="sync"]{color:#0b5cad;border-color:#a9c6ea}.ah-pill[data-s="sync"]::before{background:#0b5cad;animation:e26pulse 1s ease-in-out infinite}
+@keyframes e26pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.ah-pill[data-s="sync"]::before{animation:none}}
+#ah-banner:not(.err){display:none}
+body.acct-open #ah-banner{display:block}
+/* tips off: hide instructional text once the team is trained */
+body.tips-off .hint, body.tips-off .mem-pick, body.tips-off #xp-sec > p.small, body.tips-off #df-detail > p.small,
+body.tips-off .actions > p.small:not(#export-note), body.tips-off .ah-local-note, body.tips-off .e26-tip{display:none!important}
+/* view toolbar + compass */
+.e26-tools{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:10px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100% - 130px)}
+.e26-tools button{font:600 12px var(--font-ui);padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;box-shadow:0 1px 2px rgba(20,33,58,.08)}
+.e26-tools button[aria-pressed="true"]{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+.e26-tools button.dive{border-color:var(--accent);color:var(--accent)}
+.e26-tools button.dive[aria-pressed="true"]{background:var(--accent);color:#fff}
+.e26-tools button:focus-visible,.e26-compass button:focus-visible,.e26-legend button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.e26-compass{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;z-index:4;width:96px;height:96px}
+.e26-compass .ring{position:absolute;inset:10px;border-radius:50%;background:var(--panel);border:1px solid var(--line);box-shadow:0 2px 8px rgba(20,33,58,.12)}
+.e26-compass button{position:absolute;width:26px;height:22px;margin:-11px 0 0 -13px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--fg);font:700 11px var(--font-ui);cursor:pointer;padding:0}
+.e26-compass button.n{background:var(--navy);color:var(--panel);border-color:var(--navy)}
+.e26-compass button.plan{left:50%;top:50%;width:30px;height:30px;margin:-15px 0 0 -15px;border-radius:50%;font-size:10px;font-weight:600}
+.e26-compass button:hover{border-color:var(--accent)}
+/* colour legend */
+.e26-legend{position:absolute;left:max(10px,env(safe-area-inset-left,0px));bottom:10px;z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 10px rgba(20,33,58,.12);padding:8px 10px;display:grid;gap:6px;font-size:12px;max-width:calc(100% - 20px)}
+.e26-legend .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.e26-legend .seg button{font:600 11.5px var(--font-ui);padding:4px 9px;border:none;background:var(--panel);color:var(--fg);cursor:pointer}
+.e26-legend .seg button+button{border-left:1px solid var(--line)}
+.e26-legend .seg button[aria-pressed="true"]{background:var(--navy);color:var(--panel)}
+.e26-legend .lh{display:flex;align-items:center;gap:8px;font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.e26-legend .items{display:flex;flex-wrap:wrap;gap:4px 12px}
+.e26-legend .it{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.e26-legend .it i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.e26-legend .it b{font:600 11px var(--font-mono);color:var(--muted)}
+.e26-legend .lnote{color:var(--muted);font-size:11px}
+/* hover card */
+.e26-card{position:absolute;z-index:6;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,#0b5cad);border-radius:6px;box-shadow:0 6px 20px rgba(20,33,58,.18);padding:7px 10px;font-size:12px;line-height:1.4;max-width:280px}
+.e26-card[hidden]{display:none}
+.e26-card .pid{font:700 12px var(--font-mono);color:var(--navy)}
+.e26-card .v{font:600 15px var(--font-mono)}
+.e26-card .m{color:var(--muted)}
+/* pop warning (confirm before saving an odd reading) */
+.e26-warn{font-size:12px;line-height:1.4;background:#fff4e0;border:1px solid #f0cf8a;color:#7a4b00;border-radius:6px;padding:6px 8px}
+.e26-warn[hidden]{display:none}
+.e26-warn b{font-weight:700}
+.e26-warn button{font:600 11.5px var(--font-ui);margin:4px 6px 0 0;padding:3px 8px;border-radius:5px;border:1px solid #d9a441;background:#fff;color:#7a4b00;cursor:pointer}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .e26-warn{background:#3a2a0c;border-color:#7a5a1c;color:#ffd58a}}
+:root[data-theme="dark"] .e26-warn{background:#3a2a0c;border-color:#7a5a1c;color:#ffd58a}
+table.ut input.chk{outline:2px dashed #e9a23b;outline-offset:-2px}
+/* action toast (with Undo) */
+.e26-toast{position:absolute;left:50%;bottom:calc(30px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:7;max-width:min(620px,calc(100% - 32px));background:var(--navy);color:var(--panel);padding:8px 8px 8px 14px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px}
+.e26-toast[hidden]{display:none}
+.e26-toast[data-warn="1"]{background:#7a4b00;color:#fff}
+.e26-toast button{font:700 12px var(--font-ui);padding:5px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.5);background:transparent;color:inherit;cursor:pointer;white-space:nowrap}
+/* shift strip */
+.e26-shift{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:12px 0 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:12.5px}
+.e26-shift .k{font:600 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.e26-shift b{font-family:var(--font-mono);font-weight:600}
+.e26-shift .stale{color:#b26b00}
+.e26-shift button{font:600 11.5px var(--font-ui);padding:4px 9px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.e26-shift button.go{border-color:var(--navy);background:var(--navy);color:var(--panel)}
+body.viewer .e26-shift button{display:none}
+/* history */
+#e26-hist summary{cursor:pointer;font-size:13px;font-weight:600;margin:4px 0}
+table.e26h{font-size:11.5px}
+table.e26h td{padding:4px 4px;vertical-align:middle}
+table.e26h td.pid{font:600 10.5px var(--font-mono);white-space:nowrap}
+#e26-hist-sec .dbtn{font:600 12px var(--font-ui);padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+table.e26h td.t{white-space:nowrap;color:var(--muted)}
+table.e26h td.ch{font-family:var(--font-mono);white-space:nowrap}
+table.e26h button{font:600 11px var(--font-ui);padding:3px 7px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+body.viewer table.e26h button, body.viewer #e26-undo{display:none}
+/* dive mode dock */
+.e26-dock{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;width:min(520px,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:10px;box-shadow:0 12px 40px rgba(20,33,58,.28);padding:12px;display:grid;gap:8px}
+.e26-dock[hidden]{display:none}
+.e26-dock .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--muted)}
+.e26-dock .top b{color:var(--fg);font-size:13px}
+.e26-dock .where{font:700 22px var(--font-ui);color:var(--navy);line-height:1.15}
+.e26-dock .where small{font:500 14px var(--font-mono);color:var(--muted);margin-left:6px}
+.e26-dock .pid{font:700 13px var(--font-mono);color:#fff;background:var(--navy);border-radius:5px;padding:4px 8px;justify-self:start;user-select:all}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .e26-dock .pid{color:#0c1220}}
+:root[data-theme="dark"] .e26-dock .pid{color:#0c1220}
+.e26-dock .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch}
+.e26-dock input.val{font:600 30px var(--font-mono);padding:6px 10px;border:2px solid var(--accent);border-radius:8px;background:var(--bg);color:var(--fg);width:100%;min-width:0;text-align:right}
+.e26-dock .unit{align-self:center;font:600 14px var(--font-ui);color:var(--muted)}
+.e26-dock .pad{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.e26-dock .pad button{font:600 20px var(--font-mono);padding:10px 0;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;touch-action:manipulation}
+.e26-dock .pad button.fn{font:600 13px var(--font-ui)}
+.e26-dock .pad button.save{grid-column:span 2;background:var(--navy);color:var(--panel);border-color:var(--navy);font:700 15px var(--font-ui)}
+.e26-dock .pad button:active{transform:translateY(1px)}
+.e26-dock .foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+.e26-dock .foot label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.e26-dock .foot button{font:600 12px var(--font-ui);padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.e26-dock .done{font-size:14px;color:#1f7a36;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.e26-dock .done[hidden]{display:none}
+body.e26-diving .pop#pop{display:none!important}
+body.viewer .e26-tools .dive{display:none}
+body.e26-diving .e26-legend{display:none}
+/* draw defect */
+.place-hint.draw{background:#0b5cad}
+@media (max-width:820px){
+  .e26-tools{max-width:calc(100% - 110px)}
+  .e26-tools button{padding:5px 8px;font-size:11.5px}
+  .e26-compass{width:84px;height:84px}
+  .e26-legend{padding:6px 8px}
+  .e26-legend .items{display:none}
+  header .tips-btn{display:none}
+  .e26-dock{bottom:6px;padding:10px}
+  .e26-dock .pad button{padding:12px 0}
+}
+</style>
 
 <div class="app">
   <nav class="rail" aria-label="Sections">
@@ -599,7 +716,7 @@ table.ut tbody tr:hover{background:rgba(11,92,173,.04)}
             <path d="M 23 -28 A 36 36 0 0 1 35 -8" class="arw" marker-end="url(#ah)"/>
             <text x="0" y="4" class="t xs c">viewed from</text><text x="0" y="15" class="t xs c">above</text>
           </g>
-          <text x="95" y="156" class="t s c b2">Legs / piles</text><text x="95" y="169" class="t xs c">12 = reference face [TBC]</text>
+          <text x="95" y="156" class="t s c b2">Legs / piles</text><text x="95" y="169" class="t xs c">12 = north face</text>
           <g transform="translate(285,78)">
             <circle r="44" class="steel"/>
             <g class="pt"><circle cx="0" cy="-44" r="4" class="p12"/><circle cx="44" cy="0" r="3.6"/><circle cx="0" cy="44" r="3.6"/><circle cx="-44" cy="0" r="3.6"/></g>
@@ -744,7 +861,7 @@ table.ut tbody tr:hover{background:rgba(11,92,173,.04)}
           <tr><td class="id">PB-23-22 …</td><td>Plan brace at H4, one per grid cell, after the 1960 plan below LW level [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">R01…</td><td>Initial inspection ring, every 500 mm with UT at 12, 3, 6 and 9 o'clock, plus a closing ring at the member end. Vertical: numbered upward, elevation in m rel. LAT. Horizontal and diagonal: mm from datum.</td><td class="sec">Survey H</td></tr>
           <tr><td class="id">AP01…</td><td>Additional inspection point — extra reading, or a pre-filled point moved to suit site conditions.</td><td class="sec">Survey H</td></tr>
-          <tr><td class="id">12, 1…11</td><td>Clock position. Piles: 12 = reference face, clockwise viewed from above. Braces: 12 = top, clockwise looking along + axial.</td><td class="sec">All grids</td></tr>
+          <tr><td class="id">12, 1…11</td><td>Clock position. Legs and piles: 12 = north face, then clockwise viewed from above (3 = east, 6 = south, 9 = west). Braces: 12 = top, clockwise looking along + axial.</td><td class="sec">All grids</td></tr>
           <tr><td class="id">LA / LB</td><td>Landing stations either side of a straight defect.</td><td class="sec">D-S H, I</td></tr>
           <tr><td class="id">D1…</td><td>Defect stations, inside the green zone.</td><td class="sec">D-S H</td></tr>
           <tr><td class="id">H1…</td><td>Through-wall hole. Edge readings at +ax, −ax, CW, CCW.</td><td class="sec">D-S F</td></tr>
@@ -760,13 +877,13 @@ table.ut tbody tr:hover{background:rgba(11,92,173,.04)}
       <h2>Datums</h2>
       <p>Piles and columns: elevation in m rel. LAT, per section (splice to splice). Horizontals: mm from the weld toe at the left pile as drawn on the gridline elevation. Diagonals: mm from the lower end; column braces from the clip at the column. Node chord rings: mm from the brace face. SOW Section 4.2 extent (LAT − 2 m to HAT + 2 m) is shown for reference.</p>
     </section>
-    <div class="note">Pile grid and numbers after drawing 30E-10 60-17 (1960); columns NW3–SE3 and pile caps after 64-X30E/M16 (1975); bracing, tiers, splices and RLs after M26 and M27. Drawing RLs are in feet and are converted taking RL 0.0 as LAT [TBC] — confirm the datum before relying on zone boundaries. Seabed levels are the 1960 spot levels at each pile. The 2022 CIP braces (0575-S-001) replace bracing in the bottom tier; which bays they are fitted to is not shown on these drawings [TBC]. The conveyor approach piles (15, 16 …) and anchor piles are not modelled. Member sizes, HAT (+1.40 m) and the 12 o'clock reference face are open items. Defect grid spacings and landing lengths are defaults pending the FUZE inspection framework.</div>
+    <div class="note">Pile grid and numbers after drawing 30E-10 60-17 (1960); columns NW3–SE3 and pile caps after 64-X30E/M16 (1975); bracing, tiers, splices and RLs after M26 and M27. Drawing RLs are in feet and are converted taking RL 0.0 as LAT [TBC] — confirm the datum before relying on zone boundaries. Seabed levels are the 1960 spot levels at each pile. The 2022 CIP braces (0575-S-001) replace bracing in the bottom tier; which bays they are fitted to is not shown on these drawings [TBC]. The conveyor approach piles (15, 16 …) and anchor piles are not modelled. Member sizes, HAT (+1.40 m) is an open item; the 12 o'clock reference is the north face. Defect grid spacings and landing lengths are defaults pending the FUZE inspection framework.</div>
     </div>
   </aside>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
 <script>
@@ -889,7 +1006,7 @@ function tag(text,pos,grp,color,cls,minor){
 function untag(rec){ const i=labels.indexOf(rec); if(i>=0) labels.splice(i,1); rec.el.remove(); if(rec.o.parent) rec.o.parent.remove(rec.o); }
 
 // ---------- NSL frame + member register (every member is inspectable)
-const UP = V(0,1,0), DOWN = V(0,-1,0), FACE = V(-1,0,0);   // pile 12 o'clock = west face [TBC]
+const UP = V(0,1,0), DOWN = V(0,-1,0), FACE = V(0,0,-1);   // pile 12 o'clock = north face (−z), clockwise from above
 const MEM = {}, MKEYS = [], GROUPS = [];
 function addMem(key, d){ MEM[key] = d; MKEYS.push(key); if(!GROUPS.includes(d.group)) GROUPS.push(d.group); }
 function sideFor(mid, a){
@@ -1045,7 +1162,7 @@ const KS = [0,3,6,9];
 const KNAME = k => k===0 ? '12' : String(k);
 const cviAct = new THREE.MeshBasicMaterial({color:0x2f8cff, transparent:true, opacity:.28, side:THREE.DoubleSide, depthWrite:false});
 
-const DEFAULTS = { active:'P29-S2', common:{date:'', operator:'', cert:'', equip:'', hat:1.4}, project:{gauges:[]} };
+const DEFAULTS = { active:'P29-S2', common:{date:'', operator:'', cert:'', equip:'', hat:1.4} };
 // Member ID (ITP document number F12221-ITP-002-<id>): filled automatically as structure + tool ID, e.g. NSL-P29-S2; editable, and clearing it restores the default
 const autoId = k => `NSL-${k}`;
 const shortName = k => MEM[k].name.startsWith(k + ' — ') ? MEM[k].name.slice(k.length + 3) : MEM[k].name;
@@ -1083,7 +1200,6 @@ function mergeState(d){
   if(d && typeof d==='object'){
     if(MKEYS.includes(d.active)) st.active = d.active;
     Object.assign(st.common, d.common||{});
-    if(d.project && typeof d.project==='object') st.project = Object.assign({gauges:[]}, d.project);
     MKEYS.forEach(k=>{ if(d[k]) { Object.assign(st[k], d[k]); st[k].readings = d[k].readings||{}; st[k].remarks = d[k].remarks||{}; } });
   }
   MKEYS.forEach(k=>{ if(!String(st[k].id||'').trim()) st[k].id = autoId(k); if(!Array.isArray(st[k].defects)) st[k].defects = []; if(!Array.isArray(st[k].extra)) st[k].extra = []; });   // the shared copy drops empty lists
@@ -1278,7 +1394,9 @@ const FIELDS = [
   ['od','Nominal OD (mm)','num'], ['wt','Nominal WT (mm)','num'], ['ffs','Fit-for-service limit (mm)','num'],
 ];
 const EXTENT = { elev:[['bottom','Inspect from — bottom (m LAT)','num'],['top','Inspect to — top (m LAT)','num']], axial:[['length','Length between datum and end (mm)','num']] };
-const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['hat','HAT (m rel. LAT)','num'],['surface','Surface condition','text']];
+const COMMON = [['date','Inspection date','date'],['operator','UT operator','text'],['cert','Operator cert no.','text'],['equip','Equipment ID','text'],['hat','HAT (m rel. LAT)','num'],
+  ['unit','UT unit (make / model)','text'],['serial','UT unit serial no.','text'],['probe','Probe size / frequency','text'],['calblock','Calibration block','text'],
+  ['couplant','Couplant','text'],['technique','Technique','select:,Pulse-echo,Echo-echo (through coating)'],['surface','Surface condition','text']];
 function fieldEl(scope, [k,label,type]){
   const id = `f-${scope}-${k}`, v = scope==='common' ? UTS.common[k] : UTS[UTS.active][k];
   if(type.startsWith('select:')) return h('label', {for:id}, label, h('select', {id, 'data-scope':scope, 'data-k':k}, type.slice(7).split(',').map(o=>h('option', {selected:o===v}, o))));
@@ -1288,7 +1406,7 @@ function fieldEl(scope, [k,label,type]){
 function renderForm(){
   const mk = UTS.active, M = MEM[mk];
   $('form-member').replaceChildren(...FIELDS.map(f=>fieldEl('member',f)), ...EXTENT[M.kind].map(f=>fieldEl('member',f)));
-  $('form-common').replaceChildren(...COMMON.map(f=>fieldEl('common',f)), gaugeField());
+  $('form-common').replaceChildren(...COMMON.map(f=>fieldEl('common',f)));
   $('ext-note').textContent = M.kind==='elev'
     ? `Section ${M.section} of the leg, splice to splice: rings on a 500 mm grid referenced to LAT, plus a ring at each end. Modelled ${M.p0.y.toFixed(2)} to ${M.p1.y>=0?'+':''}${M.p1.y.toFixed(2)} m (levels are illustrative) — enter the actual splice / seabed / leg top elevations. Member sizes are not confirmed on the drawings — enter OD and WT. ` + M.datum
     : `Rings every 500 mm from the datum to the end. ${M.datum} Length ${M.len} mm modelled from drawings M26 / M27 — enter the measured length and the member size.`;
@@ -1304,7 +1422,6 @@ function onField(e){
   if(['ffs','wt'].includes(k)){ recolour(UTS.active); restyleTable(); }
   if(k==='hat'){ /* zone only used in ITP */ }
   if(k==='id') renderSummary();
-  if(k==='gauge') renderForm();
   renderSummary();
 }
 $('form-member').addEventListener('change', onField);
@@ -1525,7 +1642,7 @@ $('file-itp').addEventListener('change', async e=>{
     const dt = c.date ? new Date(c.date+'T00:00:00Z') : null;
     if(dt) put(cv,'Date:',CV,dt);
     if(dt) put(ms,'Inspection date',MS,dt);
-    put(ms,'UT operator',MS,c.operator); put(ms,'Operator cert no.',MS,c.cert); put(ms,'Equipment ID',MS,gaugeFor(mk).equip);
+    put(ms,'UT operator',MS,c.operator); put(ms,'Operator cert no.',MS,c.cert); put(ms,'Equipment ID',MS,c.equip);
     put(ms,'Fit-for-service limit',MS,num(m.ffs)); put(ms,'HAT (m rel. LAT)',MS,num(c.hat));
     put(ms,'Ring pitch',MS,500); put(ms,'Positions per ring',MS,4);
     if(MEM[mk].kind==='elev'){ put(ms,'Survey bottom',MS,num(m.bottom)); put(ms,'Survey top',MS,num(m.top)); }
@@ -1565,7 +1682,7 @@ $('file-itp').addEventListener('change', async e=>{
     await saveFile(`F12221-ITP-002-${m.id.replace(/[^\w.-]+/g,'_')}.xlsx`, new Blob([out]));
     $('export-note').textContent = `Last export: ${m.id}, ${list.length} rings, ${n} readings${xlist(mk).length ? ` + ${xlist(mk).length} additional point${xlist(mk).length>1?'s':''}` : ''}, into ${f.name}${nDef ? `, plus ${nDef} defect sheet${nDef>1?'s':''}` : ''}. Point Register: ${nPts} point IDs.`;
   }catch(err){ toast('Export failed: ' + err.message, true); }
-  finally{ btn.disabled = false; btn.textContent = 'Export to ITP workbook'; }
+  finally{ btn.disabled = false; btn.textContent = 'Export to ITP workbook (previous format)'; }
 });
 
 setActive(UTS.active, false);
@@ -2004,7 +2121,7 @@ async function exportDefects(wb, mk, ms){
     put(ws,'Member description',DS, M.name); put(ws,'Member type',DS, M.type); put(ws,'Member orientation',DS, M.orient);
     put(ws,'Datum description',DS, M.kind==='elev' ? 'LAT (positions are mm above LAT)' : M.datum.replace(/^Datum: /,''));
     put(ws,'+ axial direction',DS, M.kind==='elev' ? 'Upward' : (M.datum.split('+ axial')[1]||'').trim());
-    put(ws,'12 o\'clock reference used',DS, M.kind==='elev' ? 'Reference face per UT Setup [TBC]' : 'Top of member');
+    put(ws,'12 o\'clock reference used',DS, M.kind==='elev' ? 'North face, clockwise viewed from above' : 'Top of member');
     put(ws,'Required landing length',DS, R.land); put(ws,'Hole-edge reading offset',DS, R.edge);
     put(ws,'Axial pitch — defect zone',DS, R.pitchD); put(ws,'Axial pitch — landing zone',DS, R.pitchL);
     put(ws,'Defect centre elevation',DS, M.kind==='elev' ? +(+d.pos).toFixed(2) : null);
@@ -2375,86 +2492,6 @@ const scDlg = h('div', {class:'ah-confirm sc-dlg', id:'sc-dlg', hidden:true, rol
 document.body.appendChild(scDlg);
 const scCard = scDlg.firstChild;
 function closeDlg(){ scDlg.hidden = true; }
-// ---------- UT gauges: project register (shared by SSL and NSL, stored once in the '__project__' record). Each member uses the project default unless another gauge is picked.
-const GTECH = ['Multiple Echo Mode - Single Element Probes Only', 'Single Echo Mode - Twin Element Probes Only', 'Echo-Echo Mode - Twin Element Probes Only'];
-const GFIELDS = [['equip','Equipment ID / tag','text'],['unit','UT unit (make / model)','text'],['serial','UT unit serial no.','text'],['probe','Probe size / frequency','text'],
-  ['calblock','Calibration block','text'],['couplant','Couplant','text'],['technique','Technique','tech'],['caldue','Calibration due','date'],['note','Note','text']];
-function legacyG(){ return ['equip','unit','serial','probe','calblock','couplant','technique']; }   // functions, not consts: renderForm runs before this part of the script
-function gauges(){ UTS.project = UTS.project || {gauges:[]}; if(!Array.isArray(UTS.project.gauges)) UTS.project.gauges = []; return UTS.project.gauges; }
-function gDefault(){ return gauges().find(g=>g.id===UTS.project.def) || gauges()[0] || null; }
-function gLabel(g){ return [g.equip, g.unit, g.serial ? 's/n ' + g.serial : ''].filter(Boolean).join(' · ') || 'Unnamed gauge'; }
-function gaugeFor(mk){
-  const m = UTS[mk] || {}, g = (m.gauge && gauges().find(x=>x.id===m.gauge)) || gDefault();
-  if(g) return g;
-  const c = UTS.common || {}, o = {}; legacyG().forEach(k=>{ o[k] = c[k] || ''; }); o.caldue = ''; return o;   // before any gauge is recorded: details typed in the old Inspection fields
-}
-function gaugeUsers(id){ return MKEYS.filter(k=>UTS[k] && UTS[k].gauge===id); }
-function gaugeField(){
-  const mk = UTS.active, curG = (UTS[mk] || {}).gauge || '', d = gDefault(), list = gauges();
-  const sel = h('select', {id:'f-member-gauge', 'data-scope':'member', 'data-k':'gauge'},
-    h('option', {value:'', selected:!curG}, d ? `Project default — ${gLabel(d)}` : 'Project default (no gauges recorded yet)'),
-    ...list.map(g=>h('option', {value:g.id, selected:g.id===curG}, gLabel(g))));
-  const g = gaugeFor(mk);
-  const info = [g.probe && 'Probe ' + g.probe, g.technique, g.calblock && 'Cal. block ' + g.calblock, g.couplant && 'Couplant ' + g.couplant, g.caldue && 'Cal. due ' + g.caldue].filter(Boolean).join(' · ');
-  return h('label', {class:'wide', for:'f-member-gauge'}, 'UT gauge used on this member', sel,
-    h('span', {class:'small g-info'}, info || (list.length ? '' : 'Record the project\'s UT gauges once (Manage UT gauges) — every member then uses the default gauge unless you pick another.')),
-    h('button', {type:'button', id:'g-manage', class:'linkbtn'}, 'Manage UT gauges…'));
-}
-function openGaugeDlg(){
-  const ro = document.body.classList.contains('viewer'), list = gauges(), d = gDefault(), c = UTS.common || {};
-  const legacy = !list.length && legacyG().some(k=>c[k]);
-  scCard.replaceChildren(
-    h('h2', {id:'sc-dlg-title'}, 'UT gauges — project register'),
-    h('p', {class:'small'}, 'Record each UT gauge / probe set used on F12221 once. The register is shared by the SSL and NSL tools. Every member uses the default gauge unless a different one is picked on that member, and the gauge details go on its UT report.'),
-    h('table', {class:'ut sc-list'}, h('thead', null, h('tr', null, h('th', null, 'Gauge'), h('th', null, 'Probe / technique'), h('th', null, 'Cal. due'), h('th', null, ''))),
-      h('tbody', null, list.length ? list.map(g=>{ const n = gaugeUsers(g.id).length;
-        return h('tr', null, h('td', null, gLabel(g), g===d ? h('span', {class:'g-def'}, ' DEFAULT') : null, n ? h('span', {class:'small'}, ` · ${n} member${n===1?'':'s'}`) : null),
-          h('td', null, [g.probe, g.technique].filter(Boolean).join(' · ')), h('td', null, g.caldue || ''),
-          h('td', {class:'xact'}, ro || g===d ? null : h('button', {type:'button', class:'g-def-btn', 'data-id':g.id}, 'Make default'),
-            ro ? null : h('button', {type:'button', class:'g-ed', 'data-id':g.id}, 'Edit'), ro ? null : h('button', {type:'button', class:'g-del', 'data-id':g.id}, 'Remove'))); })
-        : h('tr', null, h('td', {colspan:4, class:'empty'}, 'No gauges recorded yet.')))),
-    ro ? null : h('div', {class:'row', style:'justify-content:flex-start'}, h('button', {type:'button', id:'g-new', class:'pri'}, '+ Add gauge'),
-      legacy ? h('button', {type:'button', id:'g-legacy'}, 'Add from the details already entered') : null),
-    h('div', {class:'row'}, h('button', {type:'button', id:'g-close'}, 'Close')));
-  scDlg.hidden = false;
-  $('g-close').onclick = closeDlg;
-  if(ro) return;
-  $('g-new').onclick = ()=>openGaugeEdit(null);
-  if(legacy) $('g-legacy').onclick = ()=>{ const o = {}; legacyG().forEach(k=>{ if(c[k]) o[k] = c[k]; }); openGaugeEdit(null, o); };
-  let delArm = null;
-  scCard.querySelectorAll('button[data-id]').forEach(b=>b.onclick = ()=>{ const id = b.dataset.id;
-    if(b.classList.contains('g-ed')) openGaugeEdit(id);
-    if(b.classList.contains('g-def-btn')){ UTS.project.def = id; saveState(); renderForm(); openGaugeDlg(); toast('Default gauge changed — members without their own gauge now use it.'); }
-    if(b.classList.contains('g-del')){
-      const users = gaugeUsers(id);
-      if(users.length){ toast(`Used on ${users.length} member(s) (${users.slice(0,6).map(autoId).join(', ')}${users.length>6?' …':''}). Pick another gauge on those members first.`, true); return; }
-      if(delArm!==id){ delArm = id; b.textContent = 'Confirm'; b.classList.add('armed'); return; }
-      UTS.project.gauges = gauges().filter(g=>g.id!==id); if(UTS.project.def===id) delete UTS.project.def;
-      saveState(); renderForm(); openGaugeDlg(); toast('Gauge removed.'); } });
-}
-function openGaugeEdit(id, preset){
-  const g = id ? gauges().find(x=>x.id===id) : Object.assign({}, preset || {});
-  const field = ([k,label,type]) => {
-    if(type==='tech'){ const opts = GTECH.includes(g.technique||'') || !g.technique ? GTECH : [g.technique, ...GTECH];
-      return h('label', {class:'wide'}, label, h('select', {id:'ge-' + k}, h('option', {value:''}, '—'), ...opts.map(o=>h('option', {value:o, selected:o===g.technique}, o)))); }
-    return h('label', {class: k==='note' || k==='unit' ? 'wide' : null}, label, h('input', {id:'ge-' + k, type: type==='date' ? 'date' : 'text', value:g[k]||'', autocomplete:'off',
-      placeholder: {equip:'e.g. FM-UT-03', unit:'e.g. Cygnus 6+ / Olympus 38DL Plus', probe:'e.g. 13 mm / 2.25 MHz', calblock:'e.g. 5-step steel block 3–25 mm', couplant:'e.g. Ultragel II / water'}[k] || null})); };
-  scCard.replaceChildren(
-    h('h2', {id:'sc-dlg-title'}, id ? 'Edit gauge' : 'Add gauge'),
-    h('div', {class:'form'}, ...GFIELDS.map(field)),
-    id && gaugeUsers(id).length ? h('p', {class:'small'}, `Changes apply to the ${gaugeUsers(id).length} member(s) that use this gauge, and to every member using the default.`) : null,
-    h('div', {class:'row'}, h('button', {type:'button', id:'ge-back'}, 'Back'), h('button', {type:'button', id:'ge-ok', class:'pri'}, 'Save gauge')));
-  $('ge-equip').focus();
-  $('ge-back').onclick = openGaugeDlg;
-  $('ge-ok').onclick = ()=>{
-    const v = {}; GFIELDS.forEach(([k])=>{ const x = $('ge-' + k).value.trim(); if(x) v[k] = x; });
-    if(!v.equip && !v.unit && !v.serial){ toast('Enter at least the equipment ID, unit or serial number.', true); return; }
-    if(id){ GFIELDS.forEach(([k])=>{ delete g[k]; }); Object.assign(g, v); }
-    else { const nid = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,5); gauges().push(Object.assign({id:nid}, v)); if(!UTS.project.def) UTS.project.def = nid; }
-    saveState(); renderForm(); openGaugeDlg(); toast('Gauge saved.'); };
-}
-$('form-common').addEventListener('click', e=>{ if(e.target && e.target.id==='g-manage') openGaugeDlg(); });
-
 scDlg.addEventListener('click', e=>{ if(e.target===scDlg) closeDlg(); });
 window.addEventListener('keydown', e=>{ if(e.key==='Escape' && !scDlg.hidden) closeDlg(); });
 function catSelect(id, cur){ return h('select', {id}, Object.entries(SCOPE_CATS).map(([k,c])=>h('option', {value:k, selected:k===(cur||'repair')}, c.label))); }
@@ -2724,7 +2761,7 @@ function exportAllCsv(){
   const rows = [head]; let nPts = 0, nMem = 0, nDef = 0;
   MKEYS.forEach(k=>{
     const m = UTS[k], M = MEM[k], base = [STRUCT, m.id || k, k, M.group, shortName ? shortName(k) : M.name, m.od||'', m.wt||'', m.ffs||''];
-    const tail = [scopeNames(k), c.date||'', c.operator||'', c.cert||'', gaugeFor(k).equip||''];
+    const tail = [scopeNames(k), c.date||'', c.operator||'', c.cert||'', c.equip||''];
     const pts = pointRegister(k).filter(r=>r[5]!==null && r[5]!==undefined);
     const defs = m.defects || [];
     if(!pts.length && !defs.length) return;
@@ -2932,9 +2969,8 @@ async function exportUtReport(){
   const left = [['Client','Christmas Island Phosphates'], ['Client reference','CIP-MAR-INF-SOW-2026-001 Rev 0'], ['Structure', STRUCT_NAME], ['Member ID', id],
     ['Description', shortName(mk)], ['Member type', `${M.type} · ${M.orient}`], ['Survey extent', ext], ['Date of inspection', c.date||''],
     ['Acceptance criteria', ffs!==null ? `Fit-for-service limit ${ffs} mm; readings > nominal +10% re-tested` : 'Fit-for-service limit [TBC]']];
-  const gg = gaugeFor(mk);
-  const right = [['UT unit', gg.unit||''], ['Serial / equip. ID', [gg.serial, gg.equip].filter(Boolean).join(' / ') + (gg.caldue ? ' · cal. due ' + gg.caldue : '')], ['Probe size / freq.', gg.probe||''],
-    ['Calibration block', gg.calblock||''], ['Couplant', gg.couplant||''], ['Technique', gg.technique||''], ['Procedure', 'AS 2452.3 · FZ-GDN UT Inspection Rev 0'],
+  const right = [['UT unit', c.unit||''], ['Serial / equip. ID', [c.serial, c.equip].filter(Boolean).join(' / ')], ['Probe size / freq.', c.probe||''],
+    ['Calibration block', c.calblock||''], ['Couplant', c.couplant||''], ['Technique', c.technique||''], ['Procedure', 'AS 2452.3 · FZ-GDN UT Inspection Rev 0'],
     ['Surface condition', c.surface||''], ['Nominal OD / WT', `${m.od||'—'} / ${m.wt||'—'} mm`]];
   left.forEach(([l,v],i)=>{ const r = 4+i;
     merge(ws, `A${r}:B${r}`); merge(ws, `C${r}:E${r}`); merge(ws, `F${r}:G${r}`); merge(ws, `H${r}:K${r}`);
@@ -3066,17 +3102,769 @@ async function exportUtReport(){
 }
 $('btn-utr').addEventListener('click', ()=>exportUtReport().catch(e=>toast('Could not export the UT report: ' + (e && e.message || e), true)));
 
+
+// ================================================================ 2026 REFRESH — PART 2
+// Status / wall-loss colouring, camera presets + compass, hover card, reading checks, undo + change history,
+// paste from Excel, dive mode keypad, draw-a-defect, shift strip, tidy header, tips toggle, PDF member sheet.
+// Additive: wraps the functions above, changes no stored data except the per-member change log (UTS[mk].hist).
+const E26 = (function(){
+const STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL';
+const LS = (k, v) => { try{ if(v===undefined) return localStorage.getItem(STORE_KEY + '-e26-' + k); localStorage.setItem(STORE_KEY + '-e26-' + k, v); }catch(e){ return null; } };
+const nomWT = mk => num(UTS[mk].wt) ?? ((MEM[mk].size && num(MEM[mk].size.wt)) ?? null);
+const nomTxt = mk => num(UTS[mk].wt)!==null ? `${UTS[mk].wt} mm` : nomWT(mk)!==null ? `${nomWT(mk)} mm (model)` : null;
+const fmt = v => v===null || v===undefined || v==='' ? '—' : (+v).toFixed(1);
+const ringName = (mk, key) => { const i = ringIndex(mk, key); return i<0 ? '?' : `R${String(i+1).padStart(2,'0')}`; };
+const isViewer = () => document.body.classList.contains('viewer');
+function rc(el, ...a){ el.replaceChildren(...a.flat(Infinity).filter(x=>x!==null && x!==undefined && x!==false && x!=='')); }
+const typing = el => el && el.matches && el.matches('input, select, textarea, [contenteditable]');
+
+// ---------------------------------------------------------------- materials: cooler matte steel, lighter ring lines, soft shadow
+(function(){
+  const set = (m, hex, r, mt) => { if(!m) return; m.color.setHex(hex); m.roughness = r; m.metalness = mt; m.needsUpdate = true; };
+  set(paintMat, 0xc3cad3, .82, .12);
+  set(typeof steelMat!=='undefined' ? steelMat : null, 0xaeb7c2, .8, .15);
+  set(typeof plateMat!=='undefined' ? plateMat : null, 0xa9b3bf, .78, .15);
+  set(typeof colMat!=='undefined' ? colMat : null, 0xb4bcc6, .8, .15);
+  if(typeof ringMat!=='undefined') ringMat.color.setHex(0x34445e);
+  try{
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;   // static scene: draw the shadow once
+    const b = structBox(), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), R = Math.max(sz.x, sz.y, sz.z) * 0.75 + 4;
+    sun.position.copy(c).add(V(R*0.45, R*1.2, R*0.6)); sun.target.position.copy(c); scene.add(sun.target);
+    sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+    Object.assign(sun.shadow.camera, {left:-R, right:R, top:R, bottom:-R, near:0.5, far:R*4}); sun.shadow.camera.updateProjectionMatrix();
+    G.context.traverse(o=>{ if(o.isMesh && o.material && !o.material.transparent) o.castShadow = true; });
+    renderer.shadowMap.needsUpdate = true;
+    if(typeof bed!=='undefined' && bed){ bed.receiveShadow = true; bed.material.opacity = Math.max(bed.material.opacity, .5); bed.material.color.setHex(0xc8c2b4); }
+  }catch(e){}
+})();
+
+// ---------------------------------------------------------------- member status + wall loss
+function ringMin(mk, key){ const r = UTS[mk].readings[key]||{}; const v = KS.map(k=>num(r[k])).filter(x=>x!==null); return v.length ? Math.min(...v) : null; }
+function memStat(mk){
+  const list = ringsFor(mk), rd = UTS[mk].readings||{}; let n = 0, low = false, mn = null;
+  list.forEach(R=>KS.forEach(k=>{ const v = num((rd[R.key]||{})[k]); if(v===null) return; n++; if(readingClass(mk,v)==='low') low = true; if(mn===null || v<mn) mn = v; }));
+  (UTS[mk].extra||[]).forEach(x=>{ const v = num(x.val); if(v===null) return; if(readingClass(mk,v)==='low') low = true; if(mn===null || v<mn) mn = v; });
+  const defs = (UTS[mk].defects||[]).length, tot = list.length*4;
+  const wt = nomWT(mk), loss = (wt && mn!==null) ? Math.max(0, (wt - mn)/wt*100) : null;
+  return {n, tot, low, defs, mn, loss, st: low ? 'low' : defs ? 'defect' : (tot && n>=tot) ? 'done' : n ? 'prog' : 'none'};
+}
+const ST = {
+  prog:  {label:'In progress',     col:0x3c7fd6, css:'#3c7fd6'},
+  done:  {label:'Complete',        col:0x2e9e4f, css:'#2e9e4f'},
+  defect:{label:'Defect recorded', col:0xe9a23b, css:'#e9a23b'},
+  low:   {label:'Below FFS',       col:0xd62828, css:'#d62828'},
+};
+const LOSS = [
+  {max:10,  label:'< 10 %',    col:0x2e9e4f, css:'#2e9e4f'},
+  {max:20,  label:'10–20 %',   col:0xf2c230, css:'#f2c230'},
+  {max:30,  label:'20–30 %',   col:0xef7d22, css:'#ef7d22'},
+  {max:1e9, label:'≥ 30 % or below FFS', col:0xd62828, css:'#d62828'},
+];
+const lossCls = (mk, v) => { if(v===null) return null; if(readingClass(mk,v)==='low') return 3; const wt = nomWT(mk); if(!wt) return -1; const l = (wt - v)/wt*100; return LOSS.findIndex(x=>l < x.max); };
+G.status = new THREE.Group(); scene.add(G.status);
+G.heat = new THREE.Group(); scene.add(G.heat);
+const stMats = {}; Object.entries(ST).forEach(([k,s])=>{ stMats[k] = new THREE.MeshBasicMaterial({color:s.col, transparent:true, opacity:.5, depthWrite:false}); });
+const lossMats = LOSS.map(x=>new THREE.MeshBasicMaterial({color:x.col, transparent:true, opacity:.9, depthWrite:false}));
+const naMat = new THREE.MeshBasicMaterial({color:0x9aa6b8, transparent:true, opacity:.8, depthWrite:false});
+const sleeveGeo = new THREE.CylinderGeometry(1, 1, 1, 14, 1, true);
+let colourMode = LS('colour') || 'status';
+const counts = {};
+function clearGroup(g){ while(g.children.length){ const c = g.children[0]; g.remove(c); if(c.geometry && c.geometry!==sleeveGeo) c.geometry.dispose(); } }
+function sleeve(a, b, r, mat){
+  const d = new THREE.Vector3().subVectors(b, a), L = d.length(), m = new THREE.Mesh(sleeveGeo, mat);
+  m.scale.set(r, L, r); m.position.copy(a).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(UP, d.normalize()); return m;
+}
+function buildColour(){
+  clearGroup(G.status); clearGroup(G.heat);
+  Object.keys(ST).concat('none').forEach(k=>counts[k] = 0); const lc = [0,0,0,0]; let na = 0;
+  MKEYS.forEach(mk=>{
+    const M = MEM[mk], s = memStat(mk); counts[s.st]++;
+    if(s.st!=='none') G.status.add(sleeve(M.p0, M.p1, M.r + 0.03, stMats[s.st]));
+    const list = ringsFor(mk); if(!list.length) return;
+    const pitch = list.length > 1 ? Math.abs(list[1].s - list[0].s) : 0.5, half = Math.min(0.2, pitch*0.42);
+    list.forEach(R=>{ const mn = ringMin(mk, R.key); if(mn===null) return; const c = lossCls(mk, mn);
+      if(c===-1) na++; else lc[c]++;
+      const a = M.o.clone().addScaledVector(M.a, R.s - half), b = M.o.clone().addScaledVector(M.a, R.s + half);
+      G.heat.add(sleeve(a, b, M.r + 0.022, c===-1 ? naMat : lossMats[c])); });
+  });
+  counts.loss = lc; counts.na = na;
+  G.status.visible = colourMode==='status' && !focus.on; G.heat.visible = colourMode==='loss';
+  renderLegend();
+}
+let colT = null;
+function scheduleColour(){ clearTimeout(colT); colT = setTimeout(buildColour, 250); }
+
+// legend + mode switch
+const legend = h('div', {class:'e26-legend', role:'group', 'aria-label':'Model colouring'});
+view.appendChild(legend);
+function renderLegend(){
+  const seg = h('span', {class:'seg'}, [['status','Status'],['loss','Wall loss'],['off','Off']].map(([k,t])=>h('button', {type:'button', 'data-m':k, 'aria-pressed':String(colourMode===k)}, t)));
+  let items = null;
+  if(colourMode==='status') items = h('div', {class:'items'}, Object.entries(ST).map(([k,s])=>h('span', {class:'it'}, h('i', {style:`background:${s.css}`}), s.label, h('b', null, String(counts[k]||0)))),
+    h('span', {class:'it'}, h('i', {style:'background:transparent;border:1px solid var(--line)'}), 'Not started', h('b', null, String(counts.none||0))));
+  if(colourMode==='loss') items = h('div', {class:'items'}, LOSS.map((x,i)=>h('span', {class:'it'}, h('i', {style:`background:${x.css}`}), x.label, h('b', null, String((counts.loss||[])[i]||0)))),
+    counts.na ? h('span', {class:'it'}, h('i', {style:'background:#9aa6b8'}), 'No nominal WT', h('b', null, String(counts.na))) : null);
+  rc(legend, h('div', {class:'lh'}, 'Colour', seg), items, colourMode==='loss' ? h('div', {class:'lnote e26-tip'}, 'Ring minimum vs nominal WT (entered, else the engineer\'s model).') : null);
+}
+legend.addEventListener('click', e=>{ const b = e.target.closest('button[data-m]'); if(!b) return; colourMode = b.dataset.m; LS('colour', colourMode); buildColour(); });
+
+// ---------------------------------------------------------------- camera presets, compass, focus
+const DIRS = STRUCT==='NSL' ? {N:V(0,0,-1), E:V(1,0,0), S:V(0,0,1), W:V(-1,0,0)} : {N:V(-1,0,0), S:V(1,0,0), W:V(0,0,1), E:V(0,0,-1)};
+const SIDE = STRUCT==='NSL' ? {N:'North', E:'East', S:'South', W:'West'} : {N:'North', E:'East · shore', S:'South', W:'West · ships berth'};
+function flyTo(p1, t1, dur){
+  if(reduceMotion){ camera.position.copy(p1); controls.target.copy(t1); controls.update(); return; }
+  tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:dur||700};
+}
+function frameDist(){ const sz = structBox().getSize(new THREE.Vector3()); const r = sz.length()/2; return r / Math.sin((camera.fov*Math.PI/180)/2) * 1.02; }
+function viewFrom(side){
+  const c = structBox().getCenter(new THREE.Vector3()), D = frameDist();
+  if(side==='plan') return flyTo(c.clone().add(V(0, D, 0)).addScaledVector(DIRS.N, -D*0.002), c);
+  if(side==='iso'){ const v = VIEWS.initial; return flyTo(V(...v.pos), V(...v.tgt)); }
+  if(side==='fit'){ const dir = camera.position.clone().sub(controls.target).normalize(); return flyTo(c.clone().addScaledVector(dir, D), c); }
+  flyTo(c.clone().addScaledVector(DIRS[side], D).add(V(0, D*0.08, 0)), c);
+}
+const focus = {on:false};
+const dimMats = () => SNAP_MATS();
+function setFocus(on){
+  focus.on = on; $('e26-focus').setAttribute('aria-pressed', String(on));
+  if(on){ dimMats().forEach(m=>{ m.transparent = true; m.opacity = .12; m.depthWrite = false; m.needsUpdate = true; }); flyToMember(UTS.active); }
+  else { dimMats().forEach(m=>{ m.transparent = false; m.opacity = 1; m.depthWrite = true; m.needsUpdate = true; }); buildScope(); }
+  G.status.visible = colourMode==='status' && !on;
+}
+const tools = h('div', {class:'e26-tools', role:'toolbar', 'aria-label':'View'},
+  h('button', {type:'button', 'data-v':'iso', title:'Three-quarter view of the whole structure'}, 'Iso'),
+  h('button', {type:'button', 'data-v':'fit', title:'Fit the whole structure from the current direction'}, 'Fit'),
+  h('button', {type:'button', id:'e26-fly', title:'Fly to the selected member'}, 'Go to member'),
+  h('button', {type:'button', id:'e26-focus', 'aria-pressed':'false', title:'Fade everything except the selected member'}, 'Isolate'),
+  h('button', {type:'button', id:'e26-dive', class:'dive', 'aria-pressed':'false', title:'Big keypad entry, point by point (D)'}, 'Dive mode'));
+view.appendChild(tools);
+tools.addEventListener('click', e=>{ const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.v) viewFrom(b.dataset.v);
+  if(b.id==='e26-fly') flyToMember(UTS.active);
+  if(b.id==='e26-focus') setFocus(!focus.on);
+  if(b.id==='e26-dive') dive.toggle(); });
+const compass = h('div', {class:'e26-compass', role:'group', 'aria-label':'View from a side'}, h('div', {class:'ring'}),
+  ...Object.keys(DIRS).map(k=>h('button', {type:'button', 'data-side':k, class:k==='N' ? 'n' : null, title:`View from the ${SIDE[k].toLowerCase()} side`, 'aria-label':`View from ${SIDE[k]}`}, k)),
+  h('button', {type:'button', class:'plan', 'data-side':'plan', title:'Plan view, north up', 'aria-label':'Plan view'}, 'Plan'));
+view.appendChild(compass);
+compass.addEventListener('click', e=>{ const b = e.target.closest('button[data-side]'); if(b) viewFrom(b.dataset.side); });
+const cf = new THREE.Vector3(), cr = new THREE.Vector3(); let compassKey = '';
+function updateCompass(){
+  cf.subVectors(controls.target, camera.position); cf.y = 0;
+  if(cf.lengthSq() < 1e-8) cf.set(0,0,-1).applyQuaternion(camera.quaternion).setY(0);
+  if(cf.lengthSq() < 1e-8) cf.copy(DIRS.N).negate();
+  cf.normalize(); cr.crossVectors(cf, UP).normalize();
+  const key = cf.x.toFixed(3) + ',' + cf.z.toFixed(3); if(key===compassKey) return; compassKey = key;
+  const W = compass.clientWidth || 96, c = W/2, R = c - 12;
+  compass.querySelectorAll('button[data-side]:not(.plan)').forEach(b=>{ const d = DIRS[b.dataset.side];
+    b.style.left = (c + R*d.dot(cr)).toFixed(1) + 'px'; b.style.top = (c - R*d.dot(cf)).toFixed(1) + 'px'; });
+}
+
+// ---------------------------------------------------------------- hover card
+const card = h('div', {class:'e26-card', hidden:true, role:'tooltip'}); view.appendChild(card);
+let hoverEv = null, hoverRaf = 0;
+const hray = new THREE.Raycaster(), hmouse = new THREE.Vector2();
+function cls2txt(mk, v){ const c = readingClass(mk, v); return c==='low' ? ['Below FFS', '#d62828'] : c==='high' ? ['Over nominal +10 % — verify', '#e9a23b'] : c==='ok' ? ['OK', '#2e9e4f'] : ['Not read', '#0b5cad']; }
+function lossTxt(mk, v){ const wt = nomWT(mk); if(v===null || !wt) return ''; return ` · loss ${Math.max(0,(wt-v)/wt*100).toFixed(1)} %`; }
+function hoverPass(){
+  hoverRaf = 0; const e = hoverEv; if(!e) return;
+  if(placing || draw.on || e.buttons){ card.hidden = true; return; }
+  const r = canvas.getBoundingClientRect();
+  hmouse.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1); hray.setFromCamera(hmouse, camera);
+  let best = null;
+  const consider = (dist, info) => { if(!best || dist < best.dist) best = Object.assign({dist}, info); };
+  if(G.rings.visible && PICKI){ const hh = hray.intersectObject(PICKI, false)[0]; if(hh && hh.instanceId!==undefined){ const p = INST[hh.instanceId]; consider(hh.distance, {kind:'ring', p}); } }
+  if(G.rings.visible && typeof XPICK!=='undefined'){ XPICK.forEach(o=>o.visible = true); const hh = hray.intersectObjects(XPICK, false)[0]; XPICK.forEach(o=>o.visible = false); if(hh) consider(hh.distance, {kind:'x', u:hh.object.userData}); }
+  if(G.defx.visible && typeof DEFPICK!=='undefined'){ const hh = hray.intersectObjects(DEFPICK, false)[0]; if(hh) consider(hh.distance - 0.02, {kind:'d', u:hh.object.userData}); }
+  if(!best){ card.hidden = true; if(canvas.style.cursor==='pointer') canvas.style.cursor = ''; return; }
+  let pid, line, v, mk;
+  if(best.kind==='ring'){ const p = best.p; mk = p.mk; v = num((UTS[mk].readings[p.key]||{})[p.k]); const R = ringsFor(mk).find(x=>x.key===p.key);
+    pid = pidRing(mk, p.key, p.k); line = `${ringName(mk, p.key)} · ${R ? R.label : ''} · ${KNAME(p.k)} o'clock`; }
+  else if(best.kind==='x'){ mk = best.u.mk; const x = xFind(mk, best.u.n); if(!x){ card.hidden = true; return; } v = num(x.val); pid = pidAP(mk, x); line = `${xLabel(x)} · ${xPosLabel(mk, x)} · ${KNAME(+x.clock)} o'clock${x.note ? ' · ' + x.note : ''}`; }
+  else { const u = best.u; mk = u.mk; const d = UTS[mk].defects[u.di]; if(!d){ card.hidden = true; return; }
+    v = num(u.st==='pit' ? (d.pit||{}).rem : String(u.st).startsWith('edge:') ? (d.edge||{})[u.st.slice(5)] : dVal(d, u.st, u.k));
+    pid = pidDef(mk, u.di, u.st, u.k); line = `${defId(u.di)} ${DTYPES[d.type].label} · ${u.st==='pit' ? 'pit' : String(u.st).startsWith('edge:') ? 'edge ' + u.st.slice(5) : u.st + ' · ' + fmtK(u.k) + " o'clock"}`; }
+  const [ct, col] = cls2txt(mk, v);
+  card.style.setProperty('--c', col);
+  rc(card, h('div', {class:'pid'}, pid), h('div', null, `${UTS[mk].id || mk} — ${shortName(mk)}`), h('div', {class:'m'}, line),
+    h('div', null, v===null ? h('span', {class:'m'}, 'Not read — click to enter') : [h('span', {class:'v'}, `${v.toFixed(1)} mm`), ` · ${ct}${lossTxt(mk, v)}`]));
+  card.hidden = false; canvas.style.cursor = 'pointer';
+  const vr = view.getBoundingClientRect(); let x = e.clientX - vr.left + 16, y = e.clientY - vr.top + 14;
+  x = Math.min(x, vr.width - card.offsetWidth - 8); y = Math.min(y, vr.height - card.offsetHeight - 8);
+  card.style.left = x + 'px'; card.style.top = y + 'px';
+}
+canvas.addEventListener('pointermove', e=>{ if(e.pointerType==='touch') return; hoverEv = e; if(!hoverRaf) hoverRaf = requestAnimationFrame(hoverPass); });
+canvas.addEventListener('pointerleave', ()=>{ hoverEv = null; card.hidden = true; });
+canvas.addEventListener('pointerdown', ()=>{ card.hidden = true; });
+
+// ---------------------------------------------------------------- reading checks
+function neighbours(mk, key, k){
+  const list = ringsFor(mk), i = list.findIndex(R=>R.key===key), out = [];
+  if(i<0) return out;
+  const rd = UTS[mk].readings;
+  KS.forEach(kk=>{ if(kk!==k){ const v = num((rd[key]||{})[kk]); if(v!==null) out.push(v); } });
+  [i-1, i+1].forEach(j=>{ const R = list[j]; if(!R) return; const v = num((rd[R.key]||{})[k]); if(v!==null) out.push(v); });
+  return out;
+}
+function defNeighbours(mk, di, st, k){
+  const d = UTS[mk].defects[di]; if(!d || st==='pit' || String(st).startsWith('edge:')) return [];
+  const r = genDefect(mk, d), i = r.stations.findIndex(x=>x.id===st), out = [];
+  [-1,1].forEach(dk=>{ const v = num(dVal(d, st, normK(k+dk))); if(v!==null) out.push(v); });
+  [i-1, i+1].forEach(j=>{ const s = r.stations[j]; if(!s) return; const v = num(dVal(d, s.id, k)); if(v!==null) out.push(v); });
+  return out;
+}
+const median = a => { const s = a.slice().sort((x,y)=>x-y), m = s.length>>1; return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+function checkValue(mk, raw, nb){
+  const t = String(raw).trim().replace(',', '.'); if(t==='' || isNaN(+t)) return null;
+  const v = +t, wt = nomWT(mk), ffs = num(UTS[mk].ffs), msg = []; let fix = null;
+  if(wt){
+    if(v > wt*1.15) msg.push(`more than 15 % above nominal (${nomTxt(mk)})`);
+    if(v >= wt*3 && Math.abs(v/10 - wt)/wt < 0.5){ fix = +(v/10).toFixed(2); }
+    if(v < wt*0.3) msg.push(`less than 30 % of nominal (${nomTxt(mk)})`);
+  }
+  if(ffs!==null && v < ffs) msg.push(`below the FFS limit (${ffs} mm) — record a defect if confirmed`);
+  if(nb && nb.length){ const md = median(nb); if(md>0 && Math.abs(v-md)/md > 0.2) msg.push(`${Math.round(Math.abs(v-md)/md*100)} % ${v<md?'lower':'higher'} than the readings around it (${md.toFixed(1)} mm)`); }
+  return msg.length ? {v, msg, fix} : null;
+}
+// confirm-before-save in the entry boxes: the first Enter shows the warning, a second Enter (same value) saves
+function guardEntry(input, buttons, ctx){
+  const warn = h('div', {class:'e26-warn', hidden:true, role:'alert'});
+  input.insertAdjacentElement('afterend', warn);
+  let okKey = '';
+  const reset = () => { warn.hidden = true; okKey = ''; };
+  input.addEventListener('input', reset);
+  function intercept(e){
+    const c = ctx(); if(!c) return;
+    const raw = input.value, key = c.key + '|' + raw.trim();
+    const chk = checkValue(c.mk, raw, c.nb()); if(!chk || okKey===key){ warn.hidden = true; return; }
+    e.preventDefault(); e.stopImmediatePropagation(); okKey = key;
+    rc(warn, h('b', null, `${chk.v} mm — check: `), chk.msg.join('; ') + '. ', 'Press Enter again to keep it.',
+      chk.fix!==null ? h('div', null, h('button', {type:'button', 'data-fix':chk.fix}, `Use ${chk.fix} mm`)) : null);
+    warn.hidden = false; input.focus(); input.select();
+  }
+  warn.addEventListener('click', e=>{ const b = e.target.closest('button[data-fix]'); if(!b) return; input.value = b.dataset.fix; okKey = ''; warn.hidden = true; input.focus(); input.select(); });
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key==='Tab') intercept(e); }, true);
+  buttons.forEach(b=>b && b.addEventListener('click', intercept, true));
+  return reset;
+}
+const resetPopWarn = guardEntry(popVal, [$('pop-next')], ()=>selected ? {mk:selected.mk, key:pidRing(selected.mk, selected.key, selected.k), nb:()=>neighbours(selected.mk, selected.key, selected.k)} : null);
+const _select26 = select;
+select = function(sel, openPop){ _select26(sel, openPop); resetPopWarn(); };
+guardEntry($('dp-val'), [$('dp-next')], ()=>dsel ? {mk:dsel.mk, key:pidDef(dsel.mk, dsel.di, dsel.st, dsel.k), nb:()=>defNeighbours(dsel.mk, dsel.di, dsel.st, dsel.k)} : null);
+guardEntry($('xp-val'), [$('xp-save')], ()=>xsel ? {mk:xsel.mk, key:'x' + xsel.n, nb:()=>[]} : null);
+
+// flagged cells (this session) keep a dashed outline until edited
+const FLAG = new Map();   // pid → message
+function markFlags(){
+  const mk = UTS.active;
+  document.querySelectorAll('#ut-body input.rd').forEach(inp=>{ const id = pidRing(mk, inp.dataset.key, inp.dataset.k), f = FLAG.get(id); inp.classList.toggle('chk', !!f); if(f) inp.title = id + ' — check: ' + f; });
+  if(activeDef!==null) document.querySelectorAll('#df-body input.drd').forEach(inp=>{ const id = pidDef(mk, activeDef, inp.dataset.st, +inp.dataset.k), f = FLAG.get(id); inp.classList.toggle('chk', !!f); if(f) inp.title = id + ' — check: ' + f; });
+}
+const _renderTable26 = renderTable; renderTable = function(){ _renderTable26(); markFlags(); };
+const _renderDefTable26 = renderDefTable; renderDefTable = function(){ _renderDefTable26(); markFlags(); };
+
+// ---------------------------------------------------------------- change log (shared with the member record) + undo
+const HIST_MAX = 300;
+let batch = null, quiet = false, undoing = false;
+const undoStack = [];
+const who = () => (typeof persistence!=='undefined' && persistence.email) || UTS.common.operator || 'this browser';
+function logChange(mk, entry){
+  if(quiet) return;
+  const hist = (UTS[mk].hist = UTS[mk].hist || {});
+  const t = Date.now(), id = t.toString(36) + Math.random().toString(36).slice(2,5);
+  hist[id] = Object.assign({t, by:who()}, undoing ? {undo:true} : {}, entry);
+  const keys = Object.keys(hist); if(keys.length > HIST_MAX) keys.sort((a,b)=>hist[a].t-hist[b].t).slice(0, keys.length-HIST_MAX).forEach(k=>delete hist[k]);
+  const rec = Object.assign({mk}, entry);
+  if(batch) batch.push(rec); else undoStack.push([rec]);
+  if(undoStack.length > 100) undoStack.shift();
+  FLAG.delete(entry.pid);
+  if(mk===UTS.active) scheduleHist();
+}
+const _setReading26 = setReading;
+setReading = function(mk, key, k, raw){
+  const o = (UTS[mk].readings[key]||{})[k];
+  const ok = _setReading26(mk, key, k, raw); if(!ok) return ok;
+  const n = (UTS[mk].readings[key]||{})[k];
+  if(o!==n) logChange(mk, {pid:pidRing(mk, key, k), kind:'ring', ref:{key, k:+k}, o:o??null, n:n??null});
+  scheduleColour(); return ok;
+};
+function dRead(d, st, k){ return st==='pit' ? (d.pit||{}).rem : String(st).startsWith('edge:') ? (d.edge||{})[st.slice(5)] : dVal(d, st, k); }
+const _setDReading26 = setDReading;
+setDReading = function(mk, di, st, k, raw){
+  const d = UTS[mk].defects[di], o = d ? dRead(d, st, k) : undefined;
+  const ok = _setDReading26(mk, di, st, k, raw); if(!ok || !d) return ok;
+  const n = dRead(d, st, k);
+  if(o!==n) logChange(mk, {pid:pidDef(mk, di, st, k), kind:'def', ref:{di, st, k:+k}, o:o??null, n:n??null});
+  return ok;
+};
+const _setXReading26 = setXReading;
+setXReading = function(mk, n, raw, note){
+  const x = xFind(mk, n), o = x ? x.val : undefined;
+  const ok = _setXReading26(mk, n, raw, note); if(!ok || !x) return ok;
+  if(o!==x.val) logChange(mk, {pid:pidAP(mk, x), kind:'x', ref:{n}, o:o??null, n:x.val??null});
+  scheduleColour(); return ok;
+};
+function refreshAfter(mks, kinds){
+  mks.forEach(mk=>recolour(mk));
+  if(kinds.has('def')){ buildDefects(); renderDefTable(); refreshDefCounts(); }
+  if(kinds.has('x')){ buildExtra(); renderExtra(); }
+  renderTable(); renderSummary(); renderMemberSelect(); scheduleColour(); scheduleHist();
+}
+function applyEntries(list, useOld, asUndo){
+  const mks = new Set(), kinds = new Set();
+  batch = []; let n = 0;
+  try{
+    list.slice().reverse().forEach(r=>{ const v = (useOld ? r.o : r.n); const raw = v===null || v===undefined ? '' : String(v);
+      let ok = false;
+      if(r.kind==='ring') ok = setReading(r.mk, r.ref.key, r.ref.k, raw);
+      else if(r.kind==='def') ok = setDReading(r.mk, r.ref.di, r.ref.st, r.ref.k, raw);
+      else if(r.kind==='x') ok = setXReading(r.mk, r.ref.n, raw);
+      if(ok){ n++; mks.add(r.mk); kinds.add(r.kind); } });
+  } finally {
+    const b = batch; batch = null;
+    if(b && b.length){ b.forEach(x=>{ x.undo = !!asUndo; }); if(!asUndo) undoStack.push(b); }
+  }
+  refreshAfter([...mks], kinds); return n;
+}
+function undo(){
+  if(isViewer()) return;
+  const g = undoStack.pop(); if(!g){ actionToast('Nothing to undo.'); return; }
+  // log the reverse as an undo entry (kept in the history, not pushed back on the undo stack)
+  undoing = true; try{ applyEntries(g, true, true); } finally { undoing = false; }
+  actionToast(`Undone: ${g.length===1 ? `${g[0].pid} back to ${fmt(g[0].o)}` : `${g.length} readings restored`}.`);
+}
+window.addEventListener('keydown', e=>{
+  if((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z' && !(typing(document.activeElement) && document.activeElement.value)){ e.preventDefault(); undo(); }
+});
+
+// action toast with buttons
+const atoast = h('div', {class:'e26-toast', hidden:true, role:'status', 'aria-live':'polite'}); view.appendChild(atoast);
+let atT = null;
+const _toast26 = toast; toast = function(msg, bad){ atoast.hidden = true; _toast26(msg, bad); };
+function actionToast(msg, actions, warn){
+  toastEl.hidden = true;
+  rc(atoast, h('span', null, msg), ...(actions||[]).map(([t,fn])=>{ const b = h('button', {type:'button'}, t); b.addEventListener('click', ()=>{ atoast.hidden = true; fn(); }); return b; }));
+  atoast.dataset.warn = warn ? '1' : ''; atoast.hidden = false; clearTimeout(atT); atT = setTimeout(()=>atoast.hidden = true, actions && actions.length ? 9000 : 4200);
+}
+
+// table edits: save straight away, flag odd values with Undo / Keep
+function afterCellEdit(el, mk, pid, nb){
+  const chk = el.value.trim()==='' ? null : checkValue(mk, el.value, nb);
+  if(!chk){ FLAG.delete(pid); el.classList.remove('chk'); return; }
+  FLAG.set(pid, chk.msg.join('; ')); el.classList.add('chk'); el.title = pid + ' — check: ' + FLAG.get(pid);
+  const acts = [['Undo', undo], ['Keep', ()=>{ FLAG.delete(pid); markFlags(); }]];
+  if(chk.fix!==null) acts.unshift([`Use ${chk.fix}`, ()=>{ el.value = String(chk.fix); el.dispatchEvent(new Event('change', {bubbles:true})); }]);
+  actionToast(`${pid}: ${chk.v} mm is ${chk.msg[0]}.`, acts, true);
+}
+// a value over 200 is refused above; if it looks like a missed decimal point, offer the fix
+['ut-body','df-body'].forEach(id=>$(id).addEventListener('change', e=>{ const el = e.target; if(!el.matches('input.rd, input.drd')) return;
+  const t = el.value.trim().replace(',', '.'), v = +t, mk = UTS.active, wt = nomWT(mk);
+  if(t==='' || isNaN(v) || v<=200 || !wt) return;
+  const fix = [10, 100].map(d=>+(v/d).toFixed(2)).find(x=>Math.abs(x - wt)/wt < 0.5); if(fix===undefined) return;
+  setTimeout(()=>actionToast(`${t} isn't a wall thickness — did you mean ${fix} mm?`, [[`Use ${fix}`, ()=>{ el.value = String(fix); el.dispatchEvent(new Event('change', {bubbles:true})); }]], true), 0);
+}, true));
+$('ut-body').addEventListener('change', e=>{ const el = e.target; if(!el.classList.contains('rd')) return;
+  const mk = UTS.active, key = el.dataset.key, k = +el.dataset.k;
+  // neighbours exclude the value just saved
+  const nb = neighbours(mk, key, k); afterCellEdit(el, mk, pidRing(mk, key, k), nb); });
+$('df-body').addEventListener('change', e=>{ const el = e.target; if(!el.classList.contains('drd') || activeDef===null) return;
+  const mk = UTS.active; afterCellEdit(el, mk, pidDef(mk, activeDef, el.dataset.st, +el.dataset.k), defNeighbours(mk, activeDef, el.dataset.st, +el.dataset.k)); });
+
+// ---------------------------------------------------------------- paste a block of readings (Excel, UT unit export)
+function parseBlock(text, cols){
+  const rows = text.replace(/\r/g,'').split('\n').filter((l,i,a)=>l.trim()!=='' || i < a.length-1).map(l=>l.split(/\t|;|,(?=\s*[\d.\-—]|\s*$)|\s{2,}/).map(s=>s.trim()));
+  return rows.filter(r=>r.some(c=>c!=='')).map(r=>{
+    let cells = r.filter(c=>!/^(R|D|LA|LB|AP)\d+$/i.test(c));
+    if(cells.length > cols) cells = cells.slice(cells.length - cols);
+    return cells.map(c=>c==='' || /^[-—–]$/.test(c) ? null : c.replace(',', '.'));
+  });
+}
+function pasteInto(e, sel, cols, apply){
+  const t = e.target; if(!t.matches || !t.matches(sel)) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if(!/[\t\n;]|\s{2,}/.test(text.trim())) return;   // single value: normal paste
+  e.preventDefault();
+  if(isViewer()){ toast('View only — you do not have edit access.', true); return; }
+  const ins = [...document.querySelectorAll(sel)], i0 = ins.indexOf(t), r0 = Math.floor(i0/cols), c0 = i0 % cols;
+  const block = parseBlock(text, cols);
+  let n = 0, bad = 0, flagged = 0; const mk = UTS.active;
+  batch = [];
+  try{
+    block.forEach((row, i)=>row.forEach((v, j)=>{
+      const inp = ins[(r0+i)*cols + c0 + j]; if(!inp || c0 + j >= cols || v===null) return;
+      if(isNaN(+v)){ bad++; return; }
+      const res = apply(inp, v); if(res===false){ bad++; return; } n++; if(res==='flag') flagged++; }));
+  } finally { const b = batch; batch = null; if(b && b.length) undoStack.push(b); }
+  refreshAfter([mk], new Set(sel.includes('drd') ? ['def'] : ['ring']));
+  actionToast(`Pasted ${n} reading${n===1?'':'s'}${bad ? ` · ${bad} cell${bad===1?'':'s'} skipped (not a number)` : ''}${flagged ? ` · ${flagged} to check (dashed)` : ''}.`, n ? [['Undo', undo]] : null, !!(bad || flagged));
+}
+$('ut-body').addEventListener('paste', e=>pasteInto(e, '#ut-body input.rd', 4, (inp, v)=>{
+  const mk = UTS.active, key = inp.dataset.key, k = +inp.dataset.k;
+  if(!setReading(mk, key, k, v)) return false;
+  const chk = checkValue(mk, v, neighbours(mk, key, k)); if(chk){ FLAG.set(pidRing(mk, key, k), chk.msg.join('; ')); return 'flag'; } return true; }), true);
+$('df-body').addEventListener('paste', e=>pasteInto(e, '#df-body input.drd', 12, (inp, v)=>{
+  const mk = UTS.active, st = inp.dataset.st, k = +inp.dataset.k;
+  if(!setDReading(mk, activeDef, st, k, v)) return false;
+  const chk = checkValue(mk, v, defNeighbours(mk, activeDef, st, k)); if(chk){ FLAG.set(pidDef(mk, activeDef, st, k), chk.msg.join('; ')); return 'flag'; } return true; }), true);
+
+// ---------------------------------------------------------------- history panel (this member)
+const histSec = h('section', {id:'e26-hist-sec'},
+  h('details', {id:'e26-hist'}, h('summary', {id:'e26-hist-sum'}, 'Change history'),
+    h('p', {class:'small e26-tip'}, 'Every reading change on this member: who, when, old → new. Ctrl+Z undoes your last change in this session.'),
+    h('div', {class:'btnrow', style:'margin:6px 0'}, h('button', {type:'button', id:'e26-undo', class:'dbtn'}, 'Undo last change')),
+    h('div', {class:'tblwrap'}, h('table', {class:'ut e26h'}, h('thead', null, h('tr', null, h('th', null, 'When'), h('th', null, 'Point'), h('th', null, 'Change'), h('th', null, 'By'), h('th', null, ''))), h('tbody', {id:'e26-hist-body'})))));
+$('df-sec').insertAdjacentElement('afterend', histSec);
+let histT = null;
+function scheduleHist(){ clearTimeout(histT); histT = setTimeout(renderHist, 150); }
+const when = t => { const d = new Date(t), td = new Date(); const hm = d.toTimeString().slice(0,5); return d.toDateString()===td.toDateString() ? hm : `${d.toISOString().slice(5,10)} ${hm}`; };
+function renderHist(){
+  const mk = UTS.active, hist = UTS[mk].hist || {}, ids = Object.keys(hist).sort((a,b)=>hist[b].t-hist[a].t);
+  $('e26-hist-sum').textContent = `Change history (${ids.length})`;
+  rc($('e26-hist-body'), ...(ids.length ? ids.slice(0, 60).map(id=>{ const e = hist[id];
+    return h('tr', null, h('td', {class:'t'}, when(e.t)), h('td', {class:'pid'}, e.pid), h('td', {class:'ch'}, `${fmt(e.o)} → ${fmt(e.n)}`, e.undo ? h('span', {class:'m'}, ' (undo)') : null),
+      h('td', {class:'t'}, String(e.by||'').split('@')[0]), h('td', null, h('button', {type:'button', 'data-h':id, title:`Set ${e.pid} back to ${fmt(e.o)}`}, 'Revert'))); })
+    : [h('tr', null, h('td', {colspan:5, class:'empty'}, 'No changes recorded on this member yet.'))]));
+}
+$('e26-hist').addEventListener('click', e=>{
+  if(e.target.id==='e26-undo'){ undo(); return; }
+  const b = e.target.closest('button[data-h]'); if(!b) return;
+  const mk = UTS.active, en = (UTS[mk].hist||{})[b.dataset.h]; if(!en) return;
+  const n = applyEntries([Object.assign({mk}, en, {n:en.o})], false);
+  if(n) actionToast(`${en.pid} set back to ${fmt(en.o)}.`, [['Undo', undo]]);
+});
+
+// ---------------------------------------------------------------- shift strip (the inspection details already apply to every member)
+const shift = h('div', {class:'e26-shift', id:'e26-shift'});
+$('ah-banner').insertAdjacentElement('afterend', shift);
+const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); };
+function renderShift(){
+  const c = UTS.common, stale = c.date && c.date!==today();
+  rc(shift, h('span', {class:'k'}, 'Shift'),
+    c.date ? h('b', {class: stale ? 'stale' : null, title: stale ? 'The inspection date is not today' : null}, c.date) : h('span', {class:'stale'}, 'no date'),
+    h('span', null, c.operator ? c.operator : h('span', {class:'stale'}, 'no operator')),
+    c.unit || c.equip ? h('span', {class:'m'}, [c.unit, c.equip].filter(Boolean).join(' · ')) : null,
+    (!c.date || stale) ? h('button', {type:'button', class:'go', id:'e26-today'}, 'Set date to today') : null,
+    h('button', {type:'button', id:'e26-shift-edit'}, 'Edit details'));
+}
+shift.addEventListener('click', e=>{
+  if(e.target.id==='e26-today'){ UTS.common.date = today(); saveState(); renderForm(); renderShift(); actionToast('Inspection date set to today for every member.'); }
+  if(e.target.id==='e26-shift-edit'){ const s = $('form-common'); s.closest('section').scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block:'start'}); const f = s.querySelector('input'); if(f) f.focus(); }
+});
+$('form-common').addEventListener('change', ()=>setTimeout(renderShift, 0));
+
+// ---------------------------------------------------------------- dive mode: big keypad, point by point, skips points already read
+const dive = (function(){
+  const el = h('div', {class:'e26-dock', id:'e26-dock', hidden:true, role:'dialog', 'aria-label':'Dive mode entry'});
+  view.appendChild(el);
+  let cur = null, okKey = '', fresh = true, skipRead = LS('skip')!=='0';
+  el.append(
+    h('div', {class:'top'}, h('span', null, h('b', {id:'e26-dm'}), ' ', h('span', {id:'e26-dn'})), h('span', {id:'e26-dp'})),
+    h('div', {class:'where', id:'e26-dw'}),
+    h('div', {class:'pid', id:'e26-dpid'}),
+    h('div', {class:'row'}, h('input', {class:'val', id:'e26-dv', inputmode:'none', autocomplete:'off', 'aria-label':'Wall thickness (mm)'}), h('span', {class:'unit'}, 'mm')),
+    h('div', {class:'e26-warn', id:'e26-dwarn', hidden:true, role:'alert'}),
+    h('div', {class:'done', id:'e26-ddone', hidden:true}, h('span', null, '✓ Every point on this member is read.'), h('button', {type:'button', id:'e26-dnextm', class:'dbtn primary'}, 'Next member ›')),
+    h('div', {class:'pad'}, ['7','8','9','⌫','4','5','6','Clear','1','2','3','Skip','.','0'].map(t=>h('button', {type:'button', 'data-key':t, class: t.length>1 && t!=='⌫' ? 'fn' : null}, t)),
+      h('button', {type:'button', 'data-key':'save', class:'save'}, 'Save ›')),
+    h('div', {class:'foot'}, h('span', null, h('button', {type:'button', 'data-key':'prev'}, '‹ Previous'), ' '),
+      h('label', null, h('input', {type:'checkbox', id:'e26-dskip', checked:skipRead}), 'Skip points already read'),
+      h('span', {class:'e26-tip'}, 'Enter save · Shift+Enter back · Esc close'), h('button', {type:'button', 'data-key':'exit'}, 'Close')));
+  const inp = $('e26-dv'), warn = $('e26-dwarn');
+  const pts = mk => { const out = []; ringsFor(mk).forEach(R=>KS.forEach(k=>out.push({mk, key:R.key, k}))); return out; };
+  const valOf = p => num((UTS[p.mk].readings[p.key]||{})[p.k]);
+  function show(p){
+    cur = p; okKey = ''; fresh = true; warn.hidden = true;
+    const all = pts(p.mk), read = all.filter(x=>valOf(x)!==null).length, i = all.findIndex(x=>x.key===p.key && x.k===p.k);
+    $('e26-dm').textContent = UTS[p.mk].id || p.mk; $('e26-dn').textContent = shortName(p.mk); $('e26-dp').textContent = `${read} of ${all.length} read · point ${i+1}`;
+    const R = ringsFor(p.mk).find(x=>x.key===p.key);
+    rc($('e26-dw'), `${ringName(p.mk, p.key)} · ${KNAME(p.k)} o'clock`, h('small', null, R ? R.label : ''));
+    $('e26-dpid').textContent = pidRing(p.mk, p.key, p.k);
+    const v = valOf(p); inp.value = v===null ? '' : String(v);
+    $('e26-ddone').hidden = true;
+    select(p, false);
+    if(!isTouch) { inp.focus(); inp.select(); }
+  }
+  function nextFrom(p, dir){
+    const all = pts(p.mk); let i = all.findIndex(x=>x.key===p.key && x.k===p.k);
+    for(let n=0; n<all.length; n++){ i += dir; if(i<0 || i>=all.length) break; if(!skipRead || dir<0 || valOf(all[i])===null) return all[i]; }
+    if(dir>0 && skipRead){ const u = all.find(x=>valOf(x)===null); if(u) return u; }
+    return null;
+  }
+  function complete(){ cur = cur || null; $('e26-ddone').hidden = false; warn.hidden = true; $('e26-dp').textContent = `${pts(UTS.active).length} of ${pts(UTS.active).length} read`; }
+  function save(){
+    if(!cur) return;
+    const raw = inp.value.trim();
+    if(raw!==''){
+      const key = jk(cur.mk, cur.key, cur.k, raw), chk = checkValue(cur.mk, raw, neighbours(cur.mk, cur.key, cur.k));
+      if(chk && okKey!==key){ okKey = key;
+        rc(warn, h('b', null, `${chk.v} mm — check: `), chk.msg.join('; ') + '. Save again to keep it.', chk.fix!==null ? h('div', null, h('button', {type:'button', 'data-fix':chk.fix}, `Use ${chk.fix} mm`)) : null);
+        warn.hidden = false; return; }
+      if(!setReading(cur.mk, cur.key, cur.k, raw)) return;
+      if(chk) FLAG.set(pidRing(cur.mk, cur.key, cur.k), chk.msg.join('; '));
+      if(cur.mk===UTS.active){ renderTable(); renderSummary(); } renderMemberSelect();
+    }
+    advance(1);
+  }
+  function advance(dir){ const n = nextFrom(cur, dir); if(n) show(n); else if(dir>0) complete(); }
+  warn.addEventListener('click', e=>{ const b = e.target.closest('button[data-fix]'); if(!b) return; inp.value = b.dataset.fix; okKey = ''; warn.hidden = true; });
+  el.addEventListener('click', e=>{
+    const b = e.target.closest('button[data-key]'); if(!b) return; const k = b.dataset.key;
+    if(/^[0-9.]$/.test(k)){ if(fresh){ inp.value = ''; fresh = false; } if(k==='.' && inp.value.includes('.')) return; inp.value += k; okKey = ''; warn.hidden = true; }
+    else if(k==='⌫'){ inp.value = inp.value.slice(0,-1); okKey = ''; fresh = false; }
+    else if(k==='Clear'){ inp.value = ''; okKey = ''; }
+    else if(k==='Skip') advance(1);
+    else if(k==='prev') advance(-1);
+    else if(k==='save') save();
+    else if(k==='exit') toggle(false);
+    if(!isTouch) inp.focus();
+  });
+  $('e26-dnextm').addEventListener('click', ()=>{
+    const sc = scActive(), order = sc ? scMembers(sc) : MKEYS; let i = order.indexOf(UTS.active);
+    const nx = order[(i+1) % order.length] || MKEYS[(MKEYS.indexOf(UTS.active)+1) % MKEYS.length];
+    setActive(nx, true);
+  });
+  $('e26-dskip').addEventListener('change', e=>{ skipRead = e.target.checked; LS('skip', skipRead ? '1' : '0'); });
+  inp.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); if(e.shiftKey) advance(-1); else save(); }
+    else if(e.key==='Escape'){ e.preventDefault(); toggle(false); }
+  });
+  inp.addEventListener('input', ()=>{ okKey = ''; fresh = false; warn.hidden = true; });
+  const isTouch = window.matchMedia('(pointer:coarse)').matches;
+  function start(){
+    const mk = UTS.active, all = pts(mk);
+    if(!all.length){ toast('Enter the survey extent for this member first — no rings yet.', true); toggle(false); return; }
+    const s = selected && selected.mk===mk ? all.find(x=>x.key===selected.key && x.k===selected.k && valOf(x)===null) : null;
+    const first = s || all.find(x=>valOf(x)===null);
+    if(first) show(first); else { show(all[0]); complete(); }
+  }
+  function toggle(on){
+    on = on===undefined ? el.hidden : on;
+    if(on && isViewer()){ toast('View only — you do not have edit access.', true); return; }
+    el.hidden = !on; document.body.classList.toggle('e26-diving', on); $('e26-dive').setAttribute('aria-pressed', String(on));
+    if(on){ if(typeof pop!=='undefined' && !pop.hidden){ try{ commitPop(); }catch(_){} } pop.hidden = true; G.rings.visible = true; $('L-rings').checked = true; flyToMember(UTS.active); start(); }
+    else { cur = null; select(null); }
+  }
+  // clicking a point in the model while diving moves the dock to that point
+  const _select26d = select;
+  select = function(sel, openPop){ if(!el.hidden && sel && openPop){ if(sel.mk!==UTS.active) setActive(sel.mk, false); show(sel); return; } _select26d(sel, openPop); };
+  const _setActive26d = setActive;
+  setActive = function(mk, move){ const ch = mk!==UTS.active; _setActive26d(mk, move); if(ch && !el.hidden) start(); };
+  window.addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='d' && !e.ctrlKey && !e.metaKey && !e.altKey && !typing(document.activeElement)){ e.preventDefault(); toggle(); } });
+  return {toggle, get on(){ return !el.hidden; }};
+})();
+
+// ---------------------------------------------------------------- draw a defect: drag across the member surface to size it
+const draw = (function(){
+  const st = {on:false, a:null, mesh:null};
+  const btn = h('button', {type:'button', id:'df-draw', class:'dbtn', title:'Drag across the member surface to set the defect centre, length and width'}, 'Draw on model');
+  $('df-place').insertAdjacentElement('afterend', btn);
+  const hint = h('div', {class:'place-hint draw', hidden:true}, h('b', null, 'Drawing defect'), ' — drag across the highlighted member to outline it · ', h('kbd', null, 'Esc'), ' cancel');
+  view.appendChild(hint);
+  function hitAt(e){
+    rayFrom(e);
+    const target = memPick.filter(m=>m.userData.mk===UTS.active);
+    const hh = dray.intersectObjects(target, false)[0]; if(!hh) return null;
+    const mk = UTS.active, M = MEM[mk];
+    const s = hh.point.clone().sub(M.o).dot(M.a), c = M.o.clone().addScaledVector(M.a, s), rv = hh.point.clone().sub(c);
+    const right = new THREE.Vector3().crossVectors(M.f, M.u).normalize();
+    return {mk, s, k:normK(Math.atan2(rv.dot(right), rv.dot(M.u))/(Math.PI/6))};
+  }
+  function setOn(on){
+    st.on = on; st.a = null; clearPrev();
+    btn.classList.toggle('armed', on); btn.textContent = on ? 'Drag on the member…' : 'Draw on model';
+    hint.hidden = !on; controls.enabled = !on; canvas.style.cursor = on ? 'crosshair' : '';
+    if(on){ if(placing) setPlacing(false); G.defx.visible = true; const cb = $('L-defx'); if(cb) cb.checked = true; flyToMember(UTS.active); }
+  }
+  function clearPrev(){ if(st.mesh){ G.defx.remove(st.mesh); st.mesh.geometry.dispose(); st.mesh = null; } }
+  function span(a, b){ let dk = b.k - a.k; if(dk > 6) dk -= 12; if(dk < -6) dk += 12; return {s0:Math.min(a.s,b.s), s1:Math.max(a.s,b.s), k0:Math.min(a.k, a.k+dk), k1:Math.max(a.k, a.k+dk), dk, ds:b.s-a.s}; }
+  canvas.addEventListener('pointerdown', e=>{ if(!st.on || e.button!==0) return; const hh = hitAt(e); if(!hh){ toast(`Start the drag on ${UTS.active} (the highlighted member).`, true); return; } st.a = hh; canvas.setPointerCapture(e.pointerId); }, true);
+  canvas.addEventListener('pointermove', e=>{ if(!st.on || !st.a) return; const b = hitAt(e); if(!b) return; st.b = b;
+    const sp = span(st.a, b); clearPrev();
+    st.mesh = patch(UTS.active, sp.s0 - 0.005, sp.s1 + 0.005, sp.k0 - 0.05, sp.k1 + 0.05, 0.012, 0xff2d55, 0.55); st.mesh.renderOrder = 9; G.defx.add(st.mesh); });
+  canvas.addEventListener('pointerup', e=>{ if(!st.on || !st.a) return;
+    e.__handled = true; const a = st.a, b = st.b || a; st.a = null; st.b = null;
+    const mk = UTS.active, sp = span(a, b), ax = Math.max(10, Math.round(Math.abs(sp.ds)*1000)), cw = Math.max(10, Math.round(Math.abs(sp.dk)*hourMM(mk)));
+    const sc = (sp.s0+sp.s1)/2, kc = normK((sp.k0+sp.k1)/2);
+    $('df-pos').value = MEM[mk].kind==='elev' ? sc.toFixed(2) : String(posFromS(mk, sc));
+    $('df-clock').value = (Math.round(kc*2)/2===0 ? 12 : Math.round(kc*10)/10).toString();
+    const type = $('df-type').value;
+    if(type==='crack'){ $('df-len').value = String(Math.round(Math.hypot(ax, cw))); $('df-ang').value = String(Math.round(Math.atan2(cw, ax)*180/Math.PI)); }
+    else if(type==='pitting') $('df-dia').value = String(Math.max(ax, cw));
+    else { $('df-ax').value = String(ax); $('df-cw').value = String(cw); }
+    setOn(false);
+    toast(`Outlined at ${posLabel(mk, sc)}, ${fmtK(kc)} o'clock — ${type==='crack' ? `${$('df-len').value} mm long` : type==='pitting' ? `Ø${$('df-dia').value} mm` : `${ax} × ${cw} mm`}. Check the values, then save.`);
+  }, true);
+  btn.addEventListener('click', ()=>setOn(!st.on));
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape' && st.on){ setOn(false); toast('Drawing cancelled.'); } });
+  const _closeForm26 = closeForm; closeForm = function(){ _closeForm26(); if(st.on) setOn(false); };
+  return st;
+})();
+
+// ---------------------------------------------------------------- header: two-line title + doc number chip, tips toggle
+(function(){
+  const ttl = document.querySelector('header .ttl'), h1 = ttl && ttl.querySelector('h1'), ref = ttl && ttl.querySelector('.ref'); if(!ttl || !h1 || !ref) return;
+  const full = ref.textContent, doc = (full.match(/F\d{5}-ITP-\d{3}/)||[''])[0], rev = (full.match(/Rev\s*\d+/)||[''])[0];
+  const rest = full.split(' · ').filter(s=>s && s!==doc && !s.includes(doc)).map(s=>s.replace(/\s*Rev\s*\d+/, '')).join(' · ');
+  const t1 = h('div', {class:'t1'}); h1.replaceWith(t1); t1.append(h1, doc ? h('span', {class:'docno', title:'ITP document number and revision'}, [doc, rev].filter(Boolean).join(' · ')) : null);
+  ref.textContent = rest; ref.title = full;
+  const tips = h('button', {type:'button', class:'tips-btn', id:'e26-tips', 'aria-pressed':'true', title:'Show or hide the how-to hints'}, 'Tips');
+  document.querySelector('header .layer-ctl').insertAdjacentElement('afterend', tips);
+  const set = on => { document.body.classList.toggle('tips-off', !on); tips.setAttribute('aria-pressed', String(on)); };
+  set(LS('tips')!=='0');
+  tips.addEventListener('click', ()=>{ const on = document.body.classList.contains('tips-off'); set(on); LS('tips', on ? '1' : '0'); });
+  // sync pill opens the account / storage line
+  const pill = $('ah-pill'); pill.tabIndex = 0; pill.setAttribute('role', 'button'); pill.setAttribute('aria-controls', 'ah-banner');
+  const tog = () => { const on = document.body.classList.toggle('acct-open'); pill.setAttribute('aria-expanded', String(on)); };
+  pill.addEventListener('click', tog); pill.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); tog(); } });
+})();
+
+// ---------------------------------------------------------------- PDF member sheet
+function loadScript(src, test){ return new Promise((res, rej)=>{ if(test()) return res(); const s = document.createElement('script'); s.src = src; s.onload = ()=>res(); s.onerror = ()=>rej(new Error('a library could not load (' + src.split('/').slice(-2).join('/') + '). Check the connection.')); document.head.appendChild(s); }); }
+async function loadPDF(){
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', ()=>window.jspdf && window.jspdf.jsPDF);
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', ()=>window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable);
+  return window.jspdf.jsPDF;
+}
+async function exportMemberPdf(){
+  const mk = UTS.active, m = UTS[mk], M = MEM[mk], c = UTS.common, list = ringsFor(mk), s = memStat(mk), wt = nomWT(mk), ffs = num(m.ffs);
+  const btn = $('e26-pdf'); btn.disabled = true; btn.textContent = 'Building PDF…';
+  try{
+    const jsPDF = await loadPDF();
+    const doc = new jsPDF({unit:'mm', format:'a4'});
+    const asc = t => typeof t==='string' ? t.replace(/\u2212/g, '-') : Array.isArray(t) ? t.map(asc) : t;   // Helvetica has no true minus sign
+    const _text = doc.text.bind(doc); doc.text = (t, ...r) => _text(asc(t), ...r);
+    const _at = doc.autoTable.bind(doc); doc.autoTable = o => _at(Object.assign({}, o, {didParseCell: d=>{ d.cell.text = asc(d.cell.text); if(o.didParseCell) o.didParseCell(d); }}));
+    const PW = 210, ML = 14, CW = PW - 2*ML, NAVY = [0,32,96], MUTED = [90,103,128];
+    const docNo = ((document.querySelector('header .docno')||{}).textContent || 'F12221-ITP-002').split(' · ')[0];
+    // header
+    try{ doc.addImage(FM_LOGO, 'PNG', ML, 10, 39, 12); }catch(e){}
+    doc.setTextColor(...NAVY); doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text('UT MEMBER SHEET', PW-ML, 15, {align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+    doc.text(`F12221 · ${document.title} · ${docNo}`, PW-ML, 20.5, {align:'right'});
+    doc.setDrawColor(...NAVY); doc.setLineWidth(0.6); doc.line(ML, 25, PW-ML, 25);
+    doc.setTextColor(20,33,58); doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(`${m.id || mk}`, ML, 32);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.text(doc.splitTextToSize(`${shortName(mk)} · ${M.group}`, CW), ML, 37);
+    const ext = M.kind==='elev' ? `${fmtElev(m.bottom)} to ${fmtElev(m.top)} m LAT` : `${m.length||'—'} mm from datum`;
+    const kv = [
+      ['Member type', `${M.type} · ${M.orient}`], ['Nominal OD / WT', `${m.od || '—'} / ${m.wt || '—'} mm${(!m.od || !m.wt) && M.size && M.size.txt ? ` (model ${M.size.txt})` : ''}`],
+      ['Fit-for-service limit', ffs!==null ? `${ffs} mm` : '—'], ['Survey extent', ext],
+      ['Inspection date', c.date || '—'], ['UT operator / cert', [c.operator, c.cert].filter(Boolean).join(' / ') || '—'],
+      ['UT unit / serial', [c.unit, c.serial].filter(Boolean).join(' / ') || '—'], ['Probe / calibration', [c.probe, c.calblock].filter(Boolean).join(' / ') || '—'],
+      ['Technique / couplant', [c.technique, c.couplant].filter(Boolean).join(' / ') || '—'], ['Equipment ID', c.equip || '—'],
+    ];
+    doc.autoTable({startY:40, margin:{left:ML, right:ML}, theme:'grid', styles:{fontSize:8.5, cellPadding:1.6, lineColor:[211,217,227], lineWidth:0.2, textColor:[20,33,58]},
+      body: kv.reduce((rows, x, i)=>{ if(i%2===0) rows.push([x[0], x[1]]); else rows[rows.length-1].push(x[0], x[1]); return rows; }, []),
+      columnStyles:{0:{fontStyle:'bold', textColor:NAVY, cellWidth:34}, 2:{fontStyle:'bold', textColor:NAVY, cellWidth:34}}});
+    // summary
+    let y = doc.lastAutoTable.finalY + 6;
+    const lowN = list.reduce((a,R)=>a + KS.filter(k=>readingClass(mk, (m.readings[R.key]||{})[k])==='low').length, 0);
+    const res = s.low ? 'BELOW FIT-FOR-SERVICE LIMIT' : s.n < s.tot ? 'INCOMPLETE' : 'WITHIN LIMITS';
+    const resCol = s.low ? [214,40,40] : s.n < s.tot ? [178,107,0] : [31,122,54];
+    doc.setFillColor(...resCol); doc.roundedRect(ML, y-4.2, 62, 7, 1.2, 1.2, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.text(res, ML+31, y+0.4, {align:'center'});
+    doc.setTextColor(20,33,58); doc.setFont('helvetica','normal');
+    doc.text(`${s.n} of ${s.tot} ring readings · minimum ${s.mn===null ? '—' : s.mn.toFixed(1) + ' mm'}${s.loss!==null ? ` · max wall loss ${s.loss.toFixed(1)} %` : ''} · ${lowN} below FFS · ${s.defs} defect${s.defs===1?'':'s'}`, ML+66, y+0.4);
+    // pictures
+    y += 6;
+    try{
+      const iw = (CW-4)/2, ih = iw*0.62;
+      const a = snapLocation(mk, 900, Math.round(900*0.62), 2), b = snapMember(mk, 900, Math.round(900*0.62), 2);
+      doc.addImage(a, 'PNG', ML, y, iw, ih); doc.addImage(b, 'PNG', ML+iw+4, y, iw, ih);
+      doc.setFontSize(7.5); doc.setTextColor(...MUTED); doc.text('Location on the structure', ML, y+ih+3.5); doc.text('Member — rings, points and defects', ML+iw+4, y+ih+3.5);
+      y += ih + 7;
+    }catch(e){ y += 2; }
+    // readings
+    const elev = M.kind==='elev';
+    const body = list.map((R,i)=>{ const r = m.readings[R.key]||{}, vals = KS.map(k=>num(r[k])), ok = vals.filter(v=>v!==null), mn = ok.length ? Math.min(...ok) : null;
+      return [`R${String(i+1).padStart(2,'0')}`, R.label.replace(' mm','').replace(' m',''), ...vals.map(fmt), fmt(mn), mn!==null && wt ? Math.max(0,(wt-mn)/wt*100).toFixed(1) : '—', (m.remarks||{})[R.key] || '']; });
+    doc.autoTable({startY:y, margin:{left:ML, right:ML, bottom:16}, theme:'grid',
+      head:[['Ring', elev ? 'Elev. (m)' : 'Pos. (mm)', '12', '3', '6', '9', 'Min', 'Loss %', 'Remark']], body: body.length ? body : [['—','','','','','','','','No rings — enter the survey extent']],
+      styles:{fontSize:8, cellPadding:1.3, halign:'center', lineColor:[211,217,227], lineWidth:0.2, textColor:[20,33,58]},
+      headStyles:{fillColor:NAVY, textColor:255, fontStyle:'bold'}, columnStyles:{0:{fontStyle:'bold'}, 8:{halign:'left', cellWidth:48}},
+      didParseCell: d=>{ if(d.section!=='body' || d.column.index<2 || d.column.index>6) return; const v = num(d.cell.raw); const cl = readingClass(mk, v);
+        if(cl==='low'){ d.cell.styles.fillColor = [246,201,201]; d.cell.styles.textColor = [176,28,28]; d.cell.styles.fontStyle = 'bold'; }
+        else if(cl==='high') d.cell.styles.fillColor = [251,233,200]; }});
+    const XL = (m.extra||[]);
+    if(XL.length) doc.autoTable({startY:doc.lastAutoTable.finalY + 5, margin:{left:ML, right:ML, bottom:16}, theme:'grid',
+      head:[['Additional point', 'Point ID', elev ? 'Elev.' : 'Pos.', 'Clock', 'WT (mm)', 'Note']],
+      body: XL.map(x=>[xLabel(x), pidAP(mk, x), xPosLabel(mk, x), KNAME(+x.clock), fmt(x.val), [x.from ? 'moved from ' + xFromLabel(mk, x) : '', x.note||''].filter(Boolean).join(' — ')]),
+      styles:{fontSize:8, cellPadding:1.3, lineColor:[211,217,227], lineWidth:0.2}, headStyles:{fillColor:NAVY, textColor:255}});
+    const DL = (m.defects||[]);
+    if(DL.length) doc.autoTable({startY:doc.lastAutoTable.finalY + 5, margin:{left:ML, right:ML, bottom:16}, theme:'grid',
+      head:[['Defect', 'Type', 'Centre', 'Clock', 'Size', 'Readings', 'Min (mm)', 'Note']],
+      body: DL.map((d,di)=>{ const r = genDefect(mk, d); let n = 0, mn = null; r.stations.forEach(st=>{ for(let k=0;k<12;k++){ const v = num(dVal(d, st.id, k)); if(v!==null){ n++; if(mn===null || v<mn) mn = v; } } });
+        const size = d.type==='crack' ? `${d.len} mm @ ${d.ang||0}°` : d.type==='pitting' ? `Ø${d.dia} mm` : `${d.ax} × ${d.cw} mm`;
+        return [defId(di), DTYPES[d.type].label, posLabel(mk, sFromPos(mk, d.pos)), fmtK(+d.clock), size, `${n}/${r.stations.length*12}`, fmt(mn), d.note||'']; }),
+      styles:{fontSize:8, cellPadding:1.3, lineColor:[211,217,227], lineWidth:0.2}, headStyles:{fillColor:NAVY, textColor:255}});
+    // sign-off
+    y = doc.lastAutoTable.finalY + 8; if(y > 250){ doc.addPage(); y = 20; }
+    doc.autoTable({startY:y, margin:{left:ML, right:ML, bottom:16}, theme:'grid', head:[['Sign-off', 'Name', 'Signature', 'Date']],
+      body:[['UT operator', c.operator||'', '', ''], ['Supervisor', '', '', ''], ['Client representative', '', '', '']],
+      styles:{fontSize:8.5, cellPadding:3.2, lineColor:[211,217,227], lineWidth:0.2, minCellHeight:11}, headStyles:{fillColor:NAVY, textColor:255}, columnStyles:{0:{fontStyle:'bold', cellWidth:44}}});
+    const pages = doc.getNumberOfPages(), gen = new Date().toISOString().slice(0,16).replace('T',' ');
+    for(let p=1; p<=pages; p++){ doc.setPage(p); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      doc.text(`${docNo} · ${m.id || mk} · generated ${gen}`, ML, 289); doc.text(`Page ${p} of ${pages}`, PW-ML, 289, {align:'right'}); }
+    await saveFile(`F12221-UT-sheet-${(m.id || mk).replace(/[^\w.-]+/g,'_')}.pdf`, doc.output('blob'));
+  }catch(err){ toast('PDF failed: ' + err.message, true); }
+  finally{ btn.disabled = false; btn.textContent = 'Export member sheet (PDF)'; }
+}
+function fmtElev(v){ const x = num(v); return x===null ? '—' : `${x>=0?'+':'−'}${Math.abs(x).toFixed(2)}`; }
+(function(){
+  const b = h('button', {type:'button', id:'e26-pdf'}, 'Export member sheet (PDF)');
+  const p = h('p', {class:'small'}, 'A one-page summary to print or send: member and test details, location and member pictures, the readings with wall loss, defects and sign-off boxes.');
+  const utrNote = $('btn-utr').nextElementSibling; (utrNote && utrNote.tagName==='P' ? utrNote : $('btn-utr')).insertAdjacentElement('afterend', b); b.insertAdjacentElement('afterend', p);
+  b.addEventListener('click', exportMemberPdf);
+})();
+
+// ---------------------------------------------------------------- FUZE FZ-GDN UT Inspection — Tubular Truss, Rev 0 (20/10/2026)
+// Step 3: the defect region is bounded by the fit-for-service limit; Step 5: extend the landing past significant pitting / corrosion;
+// Step 6: pitting > 2 mm deep AND > 20 mm diameter is noted; Step 7: node chords read ≥ 300 mm from the brace face, 360° around.
+// Grid spacings (landing length, ring pitches, edge offset) are not given in the guidance note — they stay as defaults until FUZE confirm.
+const FUZE = {ref:'FUZE FZ-GDN UT Inspection — Tubular Truss Rev 0', pitDepth:2, pitDia:20, node:300};
+Object.assign(RULE_LABELS, {
+  land:'Landing length each side (mm) [TBC — not set by FUZE Rev 0]', pitchL:'Landing ring pitch (mm) [TBC — not set by FUZE Rev 0]',
+  pitchD:'Defect ring pitch (mm) [TBC — not set by FUZE Rev 0]', margin:'Zone margin beyond visible defect (mm) — FUZE step 3: zone ends where WT ≥ FFS',
+  edge:'Hole / pit edge offset (mm) [TBC — not set by FUZE Rev 0]', nodeDist:'Node chord readings from brace face (mm) — FUZE step 7: ≥ 300'});
+const _renderRules26 = renderRules;
+renderRules = function(){ _renderRules26();
+  document.querySelectorAll('#df-rules label').forEach(l=>{ const t = l.firstChild; if(t && t.nodeType===3) t.textContent = t.textContent.replace(/\s*\[TBC\]$/, ''); }); };
+(function(){ const sm = document.querySelector('details.rules summary'); if(sm) sm.textContent = 'Defect grid rules — ' + FUZE.ref; })();
+renderRules();
+const _genDefect26 = genDefect;
+genDefect = function(mk, d){
+  const r = _genDefect26(mk, d), ffs = num(UTS[mk].ffs);
+  if(d.type==='pitting'){ const dep = num(d.depth), dia = num(d.dia);
+    if(dep!==null && dia!==null && !(dep > FUZE.pitDepth && dia > FUZE.pitDia)) r.warn.push(`Below the FUZE step 6 threshold (pit > ${FUZE.pitDepth} mm deep and > ${FUZE.pitDia} mm diameter) — note it with the readings rather than as a significant pit.`);
+    if(dep===null) r.warn.push(`Enter the pit depth — FUZE step 6 notes pits > ${FUZE.pitDepth} mm deep and > ${FUZE.pitDia} mm diameter.`); }
+  if(ffs!==null){
+    const lowLand = r.stations.filter(st=>st.zone!=='Defect' && Object.values((d.rd||{})[st.id]||{}).some(v=>num(v)!==null && +v < ffs)).map(st=>st.id);
+    if(lowLand.length) r.warn.push(`Landing reading below FFS at ${lowLand.join(', ')} — not good steel. Extend the landing and the defect zone (FUZE steps 3 and 5).`);
+  }
+  return r;
+};
+renderDefects();
+
+// ---------------------------------------------------------------- keep everything in step
+const _saveState26 = saveState; saveState = function(){ _saveState26(); scheduleColour(); };
+const _buildMember26 = buildMember; buildMember = function(...a){ _buildMember26(...a); scheduleColour(); scheduleHist(); renderShift(); };
+const _setActive26 = setActive; setActive = function(mk, move){ _setActive26(mk, move); scheduleHist(); if(focus.on && move!==false) setFocus(true); };
+const _snapshot26 = snapshot;
+snapshot = function(o){ o = Object.assign({}, o); o.hide = (o.hide||[]).concat(['status','heat']); return _snapshot26(o); };
+const _updateLabels26 = updateLabels; updateLabels = function(){ _updateLabels26(); updateCompass(); };
+buildColour(); renderHist(); renderShift();
+return {buildColour, viewFrom, dive, undo};
+})();
+
+
 // ---------- PERSISTENCE: Supabase (live shared data, sign-in, roles) with localStorage as the offline / unconfigured fallback
 // Table public.members holds one row per (structure, member_key) → data (that member's readings, defects, points); member_key '__common__' holds
 // the shared inspection details. Roles come from the database (my_role): @franmarine.com.au = editor; other addresses must be on the access list
 // (viewer by default, can be promoted to editor in the Access tab by Franmarine staff).
 const persistence = (function(){
-  const CFG = window.F12221_CONFIG || {}, STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', COMMON = '__common__', PROJ = '__project__', PSTRUCT = 'SSL';
-  const sOf = k => k===PROJ ? PSTRUCT : STRUCT, defOf = k => k===COMMON ? DEFAULTS.common : k===PROJ ? DEFAULTS.project : DEFAULTS[k];
+  const CFG = window.F12221_CONFIG || {}, STRUCT = PID_STRUCT==='N' ? 'NSL' : 'SSL', COMMON = '__common__';
   const P = { mode:'local', online:navigator.onLine !== false, role:null, staff:false, email:'', client:null,
               base:{}, ver:{}, pending:new Set(), saving:false, applyingRemote:false, chan:null };
   const js = o => JSON.stringify(o);
-  const dc = o => o===undefined ? o : JSON.parse(JSON.stringify(o));   // deep copy: the 'last saved' copy must never share objects with the live data, or edits look unchanged and never save
   function canon(v){
     if(Array.isArray(v)) return v.map(canon);
     if(v && typeof v==='object'){ const o = {}; Object.keys(v).sort().forEach(k=>{ const c = canon(v[k]);
@@ -3092,13 +3880,15 @@ const persistence = (function(){
       new Set([...Object.keys(mine), ...Object.keys(theirs)]).forEach(k=>{ const m = merge3(b[k], mine[k], theirs[k]); if(m!==undefined) out[k] = m; }); return out; }
     return mine;   // both changed the same field: the user's own edit wins
   }
-  const cur = k => k===COMMON ? UTS.common : k===PROJ ? UTS.project : UTS[k];
+  const cur = k => k===COMMON ? UTS.common : UTS[k];
 
   // ---- UI: pill, banner, sign-in gate, access tab
   function pill(){
     const el = $('ah-pill'); if(!el) return;
-    const st = P.mode!=='shared' ? ['local','Local only'] : !P.online ? ['off','Offline — reconnecting'] : ['live', P.role==='editor' ? 'Live · Editor' : 'Live · View only'];
-    el.dataset.s = st[0]; el.textContent = st[1]; el.title = P.email ? 'Signed in as ' + P.email : '';
+    const hm = d => d ? ' · saved ' + d.toTimeString().slice(0,5) : '';
+    const st = P.mode!=='shared' ? ['local','Local only'] : !P.online ? ['off', P.dirty ? 'Offline — changes kept here' : 'Offline — reconnecting']
+      : P.role!=='editor' ? ['live','Live · View only'] : (P.saving || P.dirty) ? ['sync','Saving…'] : ['live','Live' + hm(P.lastSaved)];
+    el.dataset.s = st[0]; el.textContent = st[1]; el.title = (P.email ? 'Signed in as ' + P.email + (P.role==='editor' ? ' (editor)' : ' (view only)') + '. ' : 'Not signed in — data stays in this browser. ') + 'Click for details.';
     const b = $('ah-banner');
     if(b && !b.dataset.err){
       b.replaceChildren();
@@ -3158,11 +3948,9 @@ const persistence = (function(){
   async function loadAll(){
     const {data, error} = await P.client.from('members').select('member_key,data,version').eq('structure', STRUCT);
     if(error){ fail('Could not load the team data: ' + error.message); return false; }
-    let rows = data || [];
-    if(STRUCT!==PSTRUCT){ const pr = await P.client.from('members').select('member_key,data,version').eq('structure', PSTRUCT).eq('member_key', PROJ).maybeSingle(); if(!pr.error && pr.data) rows = rows.concat([pr.data]); }
     const d = {active:UTS.active, common:{}};
     P.base = {}; P.ver = {};
-    rows.forEach(r=>{ P.base[r.member_key] = dc(r.data); P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = dc(r.data); else if(r.member_key===PROJ) d.project = dc(r.data); else d[r.member_key] = dc(r.data); });
+    (data||[]).forEach(r=>{ P.base[r.member_key] = r.data; P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = r.data; else d[r.member_key] = r.data; });
     P.applyingRemote = true;
     try{ UTS = mergeState(d); try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} refreshUI(); }
     finally{ P.applyingRemote = false; }
@@ -3170,56 +3958,54 @@ const persistence = (function(){
   }
   function changedKeys(){
     const out = [];
-    [COMMON, PROJ, ...MKEYS].forEach(k=>{ const v = cur(k); if(!v) return;
+    [COMMON, ...MKEYS].forEach(k=>{ const v = cur(k); if(!v) return;
       const b = P.base[k];
-      if(b===undefined ? !same(v, defOf(k)) : !same(v, b)) out.push(k); });
+      if(b===undefined ? !same(v, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(v, b)) out.push(k); });
     return out;
   }
   let debT = null;
-  function schedule(delay){ if(P.mode!=='shared' || P.role!=='editor' || P.applyingRemote) return; clearTimeout(debT); debT = setTimeout(flush, delay); }
+  function schedule(delay){ if(P.mode!=='shared' || P.role!=='editor' || P.applyingRemote) return; if(!P.dirty){ P.dirty = true; pill(); } clearTimeout(debT); debT = setTimeout(flush, delay); }
   async function flush(){
     clearTimeout(debT);
     if(P.mode!=='shared' || P.role!=='editor') return;
     if(P.saving){ setTimeout(flush, 300); return; }
     if(!P.online){ fail('Offline — your changes are kept in this browser and will be sent when the connection returns.'); return; }
-    const keys = changedKeys(); if(!keys.length) return;
-    P.saving = true;
-    try{ for(const k of keys) await saveOne(k); }
-    finally{ P.saving = false; }
+    const keys = changedKeys(); if(!keys.length){ if(P.dirty){ P.dirty = false; pill(); } return; }
+    P.saving = true; pill(); let okAll = true;
+    try{ for(const k of keys) okAll = (await saveOne(k)) && okAll; }
+    finally{ P.saving = false; if(okAll) P.lastSaved = new Date(); P.dirty = changedKeys().length > 0; pill(); }
   }
   async function saveOne(k, attempt){
     const mine = JSON.parse(js(cur(k)));
     let res;
-    if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:sOf(k), member_key:k, data:mine}).select('version');
-    else res = await P.client.from('members').update({data:mine}).eq('structure', sOf(k)).eq('member_key', k).eq('version', P.ver[k]).select('version');
+    if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:STRUCT, member_key:k, data:mine}).select('version');
+    else res = await P.client.from('members').update({data:mine}).eq('structure', STRUCT).eq('member_key', k).eq('version', P.ver[k]).select('version');
     const ok = !res.error && res.data && res.data.length;
     if(ok){ P.base[k] = mine; P.ver[k] = res.data[0].version; return true; }
-    if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k===PROJ ? 'the UT gauge register' : k) + ': ' + res.error.message); return false; }
+    if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k) + ': ' + res.error.message); return false; }
     // someone else saved this member first: merge the fields this user changed over theirs and try once more
-    const g = await P.client.from('members').select('data,version').eq('structure', sOf(k)).eq('member_key', k).maybeSingle();
+    const g = await P.client.from('members').select('data,version').eq('structure', STRUCT).eq('member_key', k).maybeSingle();
     if(g.error || !g.data){ fail('Could not re-read ' + k + ' after a clash: ' + ((g.error && g.error.message) || 'not found')); return false; }
     const merged = merge3(P.base[k] || {}, mine, g.data.data);
-    P.base[k] = dc(g.data.data); P.ver[k] = g.data.version;
+    P.base[k] = g.data.data; P.ver[k] = g.data.version;
     applyMember(k, merged);
     if(attempt) { applyMember(k, g.data.data); toast('A teammate saved ' + k + ' at the same moment — their version was kept. Check your last entry.', true); return false; }
     return saveOne(k, true);
   }
   function applyMember(k, data){
-    data = dc(data);
     P.applyingRemote = true;
     try{
       if(k===COMMON) UTS.common = Object.assign({}, DEFAULTS.common, data);
-      else if(k===PROJ) UTS.project = Object.assign({gauges:[]}, data);
       else if(MKEYS.includes(k)){ const st = mergeState({active:UTS.active, common:UTS.common, [k]:data}); UTS[k] = st[k]; }
       try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){}
     } finally { P.applyingRemote = false; }
   }
   function onRemote(row){
-    if(!row || (row.structure!==STRUCT && row.member_key!==PROJ)) return;
+    if(!row || row.structure!==STRUCT) return;
     const k = row.member_key; if(P.ver[k]!==undefined && row.version <= P.ver[k]) return;
     const mine = cur(k), base = P.base[k];
-    const dirty = mine && (base===undefined ? !same(mine, defOf(k)) : !same(mine, base));
-    P.base[k] = dc(row.data); P.ver[k] = row.version;
+    const dirty = mine && (base===undefined ? !same(mine, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(mine, base));
+    P.base[k] = row.data; P.ver[k] = row.version;
     applyMember(k, dirty ? merge3(base || {}, mine, row.data) : row.data);
     if(dirty) schedule(400);
     refreshUI();
@@ -3228,7 +4014,6 @@ const persistence = (function(){
     if(P.chan) P.client.removeChannel(P.chan);
     P.chan = P.client.channel('members-' + STRUCT)
       .on('postgres_changes', {event:'*', schema:'public', table:'members', filter:'structure=eq.' + STRUCT}, p=>onRemote(p.new))
-      .on('postgres_changes', {event:'*', schema:'public', table:'members', filter:'member_key=eq.' + PROJ}, p=>onRemote(p.new))
       .subscribe(status=>{
         if(status==='SUBSCRIBED'){ if(!P.online){ P.online = true; pill(); loadAll().then(()=>flush()); } }
         else if(status==='CHANNEL_ERROR' || status==='TIMED_OUT' || status==='CLOSED'){ P.online = false; pill(); }
@@ -3360,7 +4145,7 @@ const persistence = (function(){
   document.addEventListener('change', e=>{ if(P.mode==='shared' && e.target.matches && e.target.matches('select, input[type=checkbox], input[type=date]')) setTimeout(flush, 0); });
 
   return {
-    get mode(){ return P.mode; }, get role(){ return P.role; },
+    get mode(){ return P.mode; }, get role(){ return P.role; }, get email(){ return P.email; },
     init, flush, askConfirm,
     async replaceShared(){ if(P.role!=='editor') return false; Object.keys(P.ver).forEach(k=>{ P.base[k] = {__replace:true}; }); await flush(); return true; },
   };
