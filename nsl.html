@@ -260,6 +260,8 @@ table.ut input.rd.moved::placeholder{color:#b0279f;opacity:1}
 .tabs button{padding:12px 9px 10px;white-space:nowrap;letter-spacing:.04em}
 .sg{position:fixed;inset:0;z-index:60;background:rgba(10,16,30,.55);display:grid;place-items:center;padding:16px}
 .sg[hidden]{display:none}
+#sg-form{display:grid;gap:10px}
+#sg-form[hidden]{display:none}
 .sg-card{background:var(--panel);color:var(--fg);border-radius:6px;border-top:4px solid var(--navy);max-width:420px;width:100%;padding:20px;box-shadow:0 16px 48px rgba(0,0,0,.35);display:grid;gap:10px}
 .sg-card h2{margin:0;font-size:17px;color:var(--navy)}
 .sg-card p{margin:0;line-height:1.5;color:var(--fg)}
@@ -276,6 +278,11 @@ table.acc .acc-note{display:block;font-family:var(--font-ui);color:var(--muted);
 table.acc select{font:12px var(--font-ui);padding:4px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--fg)}
 table.acc button{font:600 11px var(--font-ui);padding:4px 8px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:#c0392b;cursor:pointer}
 table.acc button.armed{background:#c0392b;color:#fff}
+table.acc button.acc-ok{color:var(--navy);margin-right:6px}
+table.acc tr.declined td{opacity:.6}
+table.acc td.req-why{font-size:12px;max-width:220px}
+#req-body td.acc-email{word-break:normal;overflow-wrap:anywhere;min-width:150px}
+#req-body td:last-child{white-space:nowrap}
 body.viewer #df-add, body.viewer .dedit, body.viewer .ddel, body.viewer #xp-add, body.viewer .xedit, body.viewer .xdel, body.viewer #pop-move,
 body.viewer #pop-next, body.viewer #dp-next, body.viewer #xp-save, body.viewer #btn-load, body.viewer #btn-clear, body.viewer #df-form,
 body.viewer #xp-form, body.viewer details.rules, body.viewer .sc-edit{display:none!important}
@@ -346,19 +353,20 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
       <div class="sg-card">
         <h2 id="sg-title">F12221 Inspection ITP — sign in</h2>
         <div id="sg-form" hidden>
-          <p>Enter your email address and we'll send you a sign-in link. Franmarine addresses can edit; other users need to be added by the Franmarine team first.</p>
-          <label for="sg-email">Email address</label>
-          <input id="sg-email" type="email" autocomplete="email" placeholder="name@company.com">
-          <button type="button" id="sg-send" class="sg-primary">Email me a sign-in link</button>
+          <form id="sg-f" novalidate style="display:grid;gap:10px">
+            <label for="sg-email">Email address</label>
+            <input id="sg-email" type="email" autocomplete="username">
+            <label for="sg-pw">Password</label>
+            <input id="sg-pw" type="password" autocomplete="current-password">
+            <button type="submit" id="sg-send" class="sg-primary">Sign in</button>
+          </form>
           <p class="sg-msg" id="sg-msg" role="alert"></p>
+          <a class="linkbtn" href="./">First time here, or forgot your password?</a>
           <button type="button" id="sg-local" class="linkbtn">Continue without signing in (this browser only)</button>
         </div>
-        <div id="sg-sent" hidden>
-          <p>Check your inbox at <b id="sg-sent-to"></b> and open the link on this device. It may take a minute; check junk mail too.</p>
-          <button type="button" id="sg-retry" class="linkbtn">Use a different address</button>
-        </div>
         <div id="sg-denied" hidden>
-          <p><b id="sg-denied-as"></b> doesn't have access to this project yet. Ask your Franmarine contact to add you in the Access tab, then sign in again.</p>
+          <p><b id="sg-denied-as"></b> doesn't have access to this project yet.</p>
+          <a class="sg-primary" href="./" style="text-align:center;text-decoration:none">Request access</a>
           <button type="button" id="sg-out" class="sg-primary">Sign out</button>
         </div>
         <div id="sg-wait" hidden><p>Checking your access…</p></div>
@@ -606,7 +614,7 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
         <ul class="tips">
           <li><b>Export UT report (Excel)</b>: one report per member — test conditions from the Inspection details, one row per ring / additional point / defect with min, max and wall reduction, the result, and sign-off boxes; plus a Readings sheet (every clock reading with its point ID) and a detail sheet per defect. No template file needed.</li>
           <li><b>Export to ITP workbook (previous format)</b>: choose this member's F12221-ITP-002 file. The tool fills the Cover, the Member Survey (setup, ring readings, defect register) and one D-S sheet per defect (D-S02 onwards are copied from D-S01), then saves a completed copy.</li>
-          <li>Sign in with your email to share readings live with the team (green <i>Live</i> pill in the header). Franmarine users are Editors; other users are added by Franmarine in the <i>Access</i> tab as Viewers or Editors. Without signing in, readings save in this browser only (<i>Local only</i>). Use <b>Save backup</b> at the end of each shift; <b>Load backup</b> while signed in replaces the team's copy after you confirm.</li>
+          <li>Sign in with your email and password to share readings live with the team (green <i>Live</i> pill in the header). Franmarine users are Editors; other users are added by Franmarine in the <i>Access</i> tab as Viewers or Editors. Without signing in, readings save in this browser only (<i>Local only</i>). Use <b>Save backup</b> at the end of each shift; <b>Load backup</b> while signed in replaces the team's copy after you confirm.</li>
           <li>Additional points go into the ring grid: in the ring's row if they share its position and the clock column is free, otherwise in their own AP rows after the rings (up to 40 rows in total).</li>
           <li>Each member's data stays in this page until you clear it, so you can re-export after corrections.</li>
         </ul>
@@ -616,6 +624,11 @@ body.viewer aside input[readonly], body.viewer .pop input[readonly]{opacity:.85;
       <section>
         <h2>Access</h2>
         <p class="small">Anyone with a <b>@franmarine.com.au</b> address is an Editor automatically. Everyone else must be added here before they can sign in — they start as a Viewer (sees live data, can export, can't change anything). Change the role to Editor to let them enter readings.</p>
+      </section>
+      <section>
+        <h2>Access requests</h2>
+        <p class="small">People who confirmed their email and asked for access from the project page. <b>Approve</b> adds them as a Viewer.</p>
+        <div class="tblwrap"><table class="acc"><thead><tr><th>Who</th><th>Reason</th><th>Requested</th><th></th></tr></thead><tbody id="req-body"></tbody></table></div>
       </section>
       <section>
         <h2>Add a person</h2>
@@ -2968,9 +2981,8 @@ const persistence = (function(){
   function gate(state, extra){
     const g = $('sg'); if(!g) return;
     g.hidden = state==='none';
-    ['sg-form','sg-sent','sg-denied','sg-wait'].forEach(id=>{ $(id).hidden = true; });
+    ['sg-form','sg-denied','sg-wait'].forEach(id=>{ $(id).hidden = true; });
     if(state==='form') $('sg-form').hidden = false;
-    if(state==='sent'){ $('sg-sent').hidden = false; $('sg-sent-to').textContent = extra || ''; }
     if(state==='denied'){ $('sg-denied').hidden = false; $('sg-denied-as').textContent = extra || ''; }
     if(state==='wait') $('sg-wait').hidden = false;
   }
@@ -3074,6 +3086,35 @@ const persistence = (function(){
     }));
     if(!(data||[]).length) body.replaceChildren(h('tr', null, h('td', {colspan:4, class:'empty'}, 'No external users yet.')));
   }
+  async function renderRequests(){
+    const body = $('req-body'), tb = document.querySelector('.tabs button[data-tab="access"]'); if(!body || !P.staff) return;
+    const {data, error} = await P.client.from('access_requests').select('email,name,company,reason,status,requested_at').order('requested_at');
+    if(error){ body.replaceChildren(h('tr', null, h('td', {colspan:4, class:'empty'}, /does not exist|relation|schema cache/i.test(error.message) ? 'Access requests are not set up yet — run supabase/access_requests.sql once in Supabase.' : 'Could not load requests: ' + error.message))); return; }
+    const rows = (data||[]).sort((x,y)=>(x.status==='pending' ? 0 : 1) - (y.status==='pending' ? 0 : 1));
+    const n = rows.filter(r=>r.status==='pending').length;
+    if(tb) tb.textContent = n ? `Access (${n})` : 'Access';
+    body.replaceChildren(...rows.map(r=>h('tr', {class:r.status==='declined' ? 'declined' : null},
+      h('td', {class:'acc-email'}, r.email, h('span', {class:'acc-note'}, [r.name, r.company].filter(Boolean).join(' · '))),
+      h('td', {class:'req-why'}, r.reason || '—'),
+      h('td', {class:'acc-by'}, (r.requested_at||'').slice(0,10), r.status==='declined' ? h('span', {class:'acc-note'}, 'declined') : null),
+      h('td', null, h('button', {type:'button', class:'req-ok acc-ok', 'data-email':r.email}, 'Approve'), r.status==='pending' ? h('button', {type:'button', class:'req-no', 'data-email':r.email}, 'Decline') : null))));
+    if(!rows.length) body.replaceChildren(h('tr', null, h('td', {colspan:4, class:'empty'}, 'No requests waiting.')));
+  }
+  async function requestClick(e){
+    const b = e.target.closest('button'); if(!b) return; const em = b.dataset.email;
+    if(b.classList.contains('req-ok')){
+      const {data} = await P.client.from('access_requests').select('name,company').eq('email', em).maybeSingle();
+      const {error} = await P.client.from('access_list').upsert({email:em, role:'viewer', note:[data && data.name, data && data.company].filter(Boolean).join(' · ') || null});
+      if(error){ toast('Could not approve: ' + error.message, true); return; }
+      await P.client.from('access_requests').delete().eq('email', em);
+      toast(`${em} approved as a Viewer. They'll see the data next time they open or reload the page.`);
+    }
+    if(b.classList.contains('req-no')){
+      const {error} = await P.client.from('access_requests').update({status:'declined', decided_by:P.email, decided_at:new Date().toISOString()}).eq('email', em);
+      toast(error ? 'Could not decline: ' + error.message : em + ' declined.', !!error);
+    }
+    renderRequests(); renderAccess();
+  }
   async function accessChange(e){
     const el = e.target;
     if(el.classList.contains('acc-role')){
@@ -3099,7 +3140,8 @@ const persistence = (function(){
     const {error} = await P.client.from('access_list').upsert({email:em, role, note:note || null});
     if(error){ toast('Could not add: ' + error.message, true); return; }
     $('acc-email').value = ''; $('acc-note').value = '';
-    toast(`${em} added as ${role==='editor' ? 'an Editor' : 'a Viewer'}. They can now sign in with that address.`); renderAccess();
+    await P.client.from('access_requests').delete().eq('email', em);   // clears any request from that address (ignored if requests aren't set up)
+    toast(`${em} added as ${role==='editor' ? 'an Editor' : 'a Viewer'}. They can now sign in with that address.`); renderAccess(); renderRequests();
   }
 
   // ---- sign-in
@@ -3117,24 +3159,25 @@ const persistence = (function(){
       const local = changedKeys().filter(k=>k!==COMMON);
       if(local.length && await askConfirm(`The team copy of the ${STRUCT} Inspection ITP is empty, but this browser holds data for ${local.length} member(s). Upload it to share with the team?`, 'Upload')) await flush();
     }
-    subscribe(); renderAccess();
+    subscribe(); renderAccess(); renderRequests();
+    if(P.staff && location.hash==='#access'){ const tb = document.querySelector('.tabs button[data-tab="access"]'); if(tb) tb.click(); }
   }
   async function init(){
     pill();
     if(!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY) || typeof window.supabase==='undefined' || !window.supabase.createClient){ gate('none'); return; }
     try{ P.client = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, {auth:{persistSession:true, detectSessionInUrl:true, flowType:'implicit'}}); }
     catch(e){ fail('Could not start the team connection: ' + e.message); return; }
-    $('sg-send').addEventListener('click', async ()=>{
-      const em = $('sg-email').value.trim().toLowerCase();
+    $('sg-f').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const em = $('sg-email').value.trim().toLowerCase(), pw = $('sg-pw').value;
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ $('sg-msg').textContent = 'Enter your email address.'; return; }
+      if(!pw){ $('sg-msg').textContent = 'Enter your password.'; return; }
       $('sg-send').disabled = true; $('sg-msg').textContent = '';
-      const {error} = await P.client.auth.signInWithOtp({email:em, options:{emailRedirectTo: location.href.split('#')[0]}});
-      $('sg-send').disabled = false;
-      if(error) $('sg-msg').textContent = 'Could not send the link: ' + error.message; else gate('sent', em);
+      const {error} = await P.client.auth.signInWithPassword({email:em, password:pw});
+      $('sg-send').disabled = false; $('sg-pw').value = '';
+      if(error) $('sg-msg').textContent = /invalid login/i.test(error.message) ? "Email or password not recognised. If you haven't set a password yet, use the link below." : error.message;
     });
-    $('sg-email').addEventListener('keydown', e=>{ if(e.key==='Enter') $('sg-send').click(); });
     $('sg-local').addEventListener('click', ()=>{ gate('none'); pill(); });
-    $('sg-retry').addEventListener('click', ()=>gate('form'));
     $('sg-out').addEventListener('click', signOut);
     let started = false;
     P.client.auth.onAuthStateChange((ev, session)=>{ if(session && !started){ started = true; startSession(session); } });
@@ -3146,6 +3189,7 @@ const persistence = (function(){
     $('acc-add').addEventListener('click', accessAdd);
     $('acc-body').addEventListener('change', accessChange);
     $('acc-body').addEventListener('click', accessClick);
+    if($('req-body')) $('req-body').addEventListener('click', requestClick);
   }
 
   // ---- hooks into the page
