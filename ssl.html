@@ -3146,12 +3146,21 @@ function flyTo(p1, t1, dur){
   tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:dur||700};
 }
 function frameDist(){ const sz = structBox().getSize(new THREE.Vector3()); const r = sz.length()/2; return r / Math.sin((camera.fov*Math.PI/180)/2) * 1.02; }
+const ISO = {pos:VIEWS.initial.pos.slice(), tgt:VIEWS.initial.tgt.slice()};
+function sideView(side){   // elevation framed to the face: the structure's width across the view and its height, plus 10 %
+  const b = structBox(), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), d = DIRS[side];
+  const w = Math.abs(d.x) > 0.5 ? sz.z : sz.x, depth = Math.abs(d.x) > 0.5 ? sz.x : sz.z, asp = (view.clientWidth || 4) / (view.clientHeight || 3), tf = Math.tan(camera.fov*Math.PI/360);
+  const D = Math.max(sz.y/2/tf, w/2/(tf*asp)) * 1.1 + depth/2;
+  return {p:c.clone().addScaledVector(d, D).add(V(0, sz.y*0.04, 0)), t:c}; }
+// default view: NSL opens on the west elevation (Initial Inspection / Defect Record presets too); Iso keeps the three-quarter view
+const DEFAULT_SIDE = STRUCT==='NSL' ? 'W' : null;
+if(DEFAULT_SIDE){ const {p, t} = sideView(DEFAULT_SIDE); ['initial','defects'].forEach(k=>{ VIEWS[k].pos = p.toArray(); VIEWS[k].tgt = t.toArray(); }); }
 function viewFrom(side){
   const c = structBox().getCenter(new THREE.Vector3()), D = frameDist();
   if(side==='plan') return flyTo(c.clone().add(V(0, D, 0)).addScaledVector(DIRS.N, -D*0.002), c);
-  if(side==='iso'){ const v = VIEWS.initial; return flyTo(V(...v.pos), V(...v.tgt)); }
+  if(side==='iso') return flyTo(V(...ISO.pos), V(...ISO.tgt));
   if(side==='fit'){ const dir = camera.position.clone().sub(controls.target).normalize(); return flyTo(c.clone().addScaledVector(dir, D), c); }
-  flyTo(c.clone().addScaledVector(DIRS[side], D).add(V(0, D*0.08, 0)), c);
+  const v = sideView(side); flyTo(v.p, v.t);
 }
 const focus = {on:false};
 const dimMats = () => SNAP_MATS();

@@ -857,7 +857,7 @@ body.e26-diving .e26-legend{display:none}
           <tr><td class="id">Grid A–E · 1–4</td><td>Pile grid at 12′-0″ centres. Rows A (north) to E (south), columns 1 (west) to 4 (east). Row gridlines are drawn looking north, column gridlines looking east, as sections A-A / B-B (M27) and C-C / D-D (M26). Letters and numbers are this tool's [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">P29-S2</td><td>Pile by its drawing number (17–35, drawing 60-17), split into Sections 1–3 at the bolted splices: Section 1 seabed to the lower splice (RL −9.68 ft), Section 2 to the upper splice (RL 15.45 ft), Section 3 to the pile top. One ITP per pile section.</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">NW3W-S2</td><td>1975 strengthening columns NW3, NE3, SW3, SE3 (M16): twin DN300 pipes at 864 crs, W / E pipe, on column lines 1 and 3 midway between rows. Same section splits as the piles [TBC].</td><td class="sec">Member ID</td></tr>
-          <tr><td class="id">B-12</td><td>Brace on a gridline, numbered from 1: top down, horizontals before diagonals, then left to right as drawn. Horizontals H1–H4 (RL 32.53, 18.74, 4.95, −8.84 ft); X-braces in each 13′-9½″ tier; in the column bays the braces run from the column at mid-tier to both piles (NA.23 / NA.23A). Tier 3 braces are where the 2022 CIP braces BR01–BR03 (0575-S-001) are fitted — confirm which bays [TBC].</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">B-12</td><td>Brace on a gridline, numbered from 1: top down, horizontals before diagonals, then left to right as drawn. Horizontals H1–H4 (RL 32.53, 18.74, 4.95, −8.84 ft); X-braces in each 13′-9½″ tier — on the west elevation (gridline 1) each X is a continuous diagonal plus two halves welded to it at the crossing, IDs n A (upper half) and n B (lower half), tiers 1–2 [tier 3 TBC]; in the column bays the braces run from the column at mid-tier to both piles (NA.23 / NA.23A). Tier 3 braces are where the 2022 CIP braces BR01–BR03 (0575-S-001) are fitted — confirm which bays [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">PB-23-22 …</td><td>Plan brace at H4, one per grid cell, after the 1960 plan below LW level [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">R01…</td><td>Initial inspection ring, every 500 mm with UT at 12, 3, 6 and 9 o'clock, plus a closing ring at the member end. Vertical: numbered upward, elevation in m rel. LAT. Horizontal and diagonal: mm from datum.</td><td class="sec">Survey H</td></tr>
           <tr><td class="id">AP01…</td><td>Additional inspection point — extra reading, or a pre-filled point moved to suit site conditions.</td><td class="sec">Survey H</td></tr>
@@ -1051,6 +1051,7 @@ COLS.forEach(c=>{ GRIDS[c] = {legs:ROWS.map(r=>pileAt(r,c)).filter(Boolean), loo
 const colIn = (g, a, b) => Object.entries(NCOL).find(([id,o])=>String(o.c)===String(g) && [pileAt(o.rows[0],o.c), pileAt(o.rows[1],o.c)].join()===[a,b].join());
 const TIERS = [[LVL.H1, LVL.M1, LVL.H2, 1], [LVL.H2, LVL.M2, LVL.H3, 2], [LVL.H3, LVL.M3, LVL.H4, 3]];
 const HUBS = [];
+const XSPLIT = {grid:1, tiers:[1,2]};   // west elevation X-braces: continuous diagonal + two halves (site photo 31 Oct 2026); tier 3 [TBC]
 function gridMembers(g){
   const {legs} = GRIDS[g], out = [];
   const H = (a,b,y,lv)=>out.push({kind:'H', p:pileP(a,y), q:pileP(b,y), so:RP, eo:RP, what:`horizontal H${lv} between piles ${a} and ${b}`, sn:SECNAME(y), datum:`Datum: weld toe at pile ${a}; + axial toward pile ${b}.`});
@@ -1065,7 +1066,9 @@ function gridMembers(g){
           datum: y<ym ? `Datum: lower end at pile ${leg}; + axial upward to column ${cid}.` : `Datum: lower end at column ${cid}; + axial upward to pile ${leg}.`}));
       } else {   // X-brace
         out.push({kind:'D', p:pileP(a,yb), q:pileP(b,yt), so:0.25, eo:0.25, what:`tier ${t} X-brace, rising from pile ${a} to ${b}`, sn:SECNAME(ym), cip: t===3, datum:`Datum: lower end at pile ${a}; + axial upward to pile ${b}.`});
-        out.push({kind:'D', p:pileP(b,yb), q:pileP(a,yt), so:0.25, eo:0.25, what:`tier ${t} X-brace, rising from pile ${b} to ${a}`, sn:SECNAME(ym), cip: t===3, datum:`Datum: lower end at pile ${b}; + axial upward to pile ${a}.`});
+        out.push({kind:'D', p:pileP(b,yb), q:pileP(a,yt), so:0.25, eo:0.25, what:`tier ${t} X-brace, rising from pile ${b} to ${a}`, sn:SECNAME(ym), cip: t===3, datum:`Datum: lower end at pile ${b}; + axial upward to pile ${a}.`,
+          split: String(g)===String(XSPLIT.grid) && XSPLIT.tiers.includes(t) ? {a, b, ym, t} : null});
+        if(String(g)===String(XSPLIT.grid) && XSPLIT.tiers.includes(t)) out[out.length-2].what = `tier ${t} X-brace, continuous diagonal rising from pile ${a} to ${b}`;
       }
     });
   }
@@ -1074,7 +1077,15 @@ function gridMembers(g){
   out.forEach(m=>{ m.top = Math.max(m.p.y, m.q.y); m.left = Math.min(h(m.p), h(m.q)); });
   out.sort((x,y)=> (y.top-x.top) || (x.kind===y.kind ? 0 : x.kind==='H' ? -1 : 1) || x.left-y.left);
   out.forEach((m,i)=>m.n = i+1);
-  return out;
+  // split diagonals keep their number with A (upper half) / B (lower half), so no other member ID changes
+  const res = [];
+  out.forEach(m=>{ if(!m.split){ res.push(m); return; }
+    const {a, b, ym, t} = m.split, X = pileP(a, ym).add(pileP(b, ym)).multiplyScalar(0.5), xo = RH + 0.03;
+    res.push(Object.assign({}, m, {n:`${m.n}A`, p:X.clone(), q:m.q.clone(), so:xo, eo:0.25, split:null, what:`tier ${t} X-brace, upper half — crossing up to pile ${a}`,
+      datum:`Datum: weld toe at the crossing (on the continuous diagonal); + axial upward to pile ${a}.`}));
+    res.push(Object.assign({}, m, {n:`${m.n}B`, p:m.p.clone(), q:X.clone(), so:0.25, eo:xo, split:null, what:`tier ${t} X-brace, lower half — pile ${b} up to the crossing`,
+      datum:`Datum: lower end at pile ${b}; + axial upward to the weld toe at the crossing.`})); });
+  return res;
 }
 const GORDER = ['A','B','C','D','E',1,2,3,4];
 GORDER.forEach(g=>{
@@ -3216,12 +3227,21 @@ function flyTo(p1, t1, dur){
   tween = {p0:camera.position.clone(), t0:controls.target.clone(), p1, t1, start:performance.now(), dur:dur||700};
 }
 function frameDist(){ const sz = structBox().getSize(new THREE.Vector3()); const r = sz.length()/2; return r / Math.sin((camera.fov*Math.PI/180)/2) * 1.02; }
+const ISO = {pos:VIEWS.initial.pos.slice(), tgt:VIEWS.initial.tgt.slice()};
+function sideView(side){   // elevation framed to the face: the structure's width across the view and its height, plus 10 %
+  const b = structBox(), c = b.getCenter(new THREE.Vector3()), sz = b.getSize(new THREE.Vector3()), d = DIRS[side];
+  const w = Math.abs(d.x) > 0.5 ? sz.z : sz.x, depth = Math.abs(d.x) > 0.5 ? sz.x : sz.z, asp = (view.clientWidth || 4) / (view.clientHeight || 3), tf = Math.tan(camera.fov*Math.PI/360);
+  const D = Math.max(sz.y/2/tf, w/2/(tf*asp)) * 1.1 + depth/2;
+  return {p:c.clone().addScaledVector(d, D).add(V(0, sz.y*0.04, 0)), t:c}; }
+// default view: NSL opens on the west elevation (Initial Inspection / Defect Record presets too); Iso keeps the three-quarter view
+const DEFAULT_SIDE = STRUCT==='NSL' ? 'W' : null;
+if(DEFAULT_SIDE){ const {p, t} = sideView(DEFAULT_SIDE); ['initial','defects'].forEach(k=>{ VIEWS[k].pos = p.toArray(); VIEWS[k].tgt = t.toArray(); }); }
 function viewFrom(side){
   const c = structBox().getCenter(new THREE.Vector3()), D = frameDist();
   if(side==='plan') return flyTo(c.clone().add(V(0, D, 0)).addScaledVector(DIRS.N, -D*0.002), c);
-  if(side==='iso'){ const v = VIEWS.initial; return flyTo(V(...v.pos), V(...v.tgt)); }
+  if(side==='iso') return flyTo(V(...ISO.pos), V(...ISO.tgt));
   if(side==='fit'){ const dir = camera.position.clone().sub(controls.target).normalize(); return flyTo(c.clone().addScaledVector(dir, D), c); }
-  flyTo(c.clone().addScaledVector(DIRS[side], D).add(V(0, D*0.08, 0)), c);
+  const v = sideView(side); flyTo(v.p, v.t);
 }
 const focus = {on:false};
 const dimMats = () => SNAP_MATS();
