@@ -2403,7 +2403,7 @@ function renderScopePanel(){
   const e = (sc.members||{})[mk], box = $('sc-this');
   if(e){
     const c = SCOPE_CATS[e.cat] || SCOPE_CATS.repair;
-    box.replaceChildren(h('span', {class:'sc-chip', style:`--c:${c.css}`}, 'In scope'), ' ', h('b', null, c.label), e.note ? h('span', {class:'sc-note'}, ' — ' + e.note) : null, ' ',
+    box.replaceChildren(h('span', {class:'sc-chip', style:`--c:${c.css}`}, 'In scope'), ' ', h('b', null, c.label), e.note ? h('span', {class:'sc-note'}, ' — ' + e.note) : '', ' ',
       h('button', {type:'button', id:'sc-edit', class:'linkbtn sc-edit'}, 'Edit'), ' ', h('button', {type:'button', id:'sc-remove', class:'linkbtn sc-edit'}, 'Remove from scope'));
   } else {
     box.replaceChildren(h('span', {class:'sc-chip off'}, 'Not in scope'), ' ', h('button', {type:'button', id:'sc-add', class:'dbtn sc-edit'}, '+ Add this member'));
@@ -3826,7 +3826,7 @@ const persistence = (function(){
     const el = $('ah-pill'); if(!el) return;
     const hm = d => d ? ' · saved ' + d.toTimeString().slice(0,5) : '';
     const st = P.mode!=='shared' ? ['local','Local only'] : !P.online ? ['off', P.dirty ? 'Offline — changes kept here' : 'Offline — reconnecting']
-      : P.role!=='editor' ? ['live','Live · View only'] : (P.saving || P.dirty) ? ['sync','Saving…'] : ['live','Live' + hm(P.lastSaved)];
+      : P.role!=='editor' ? ['live','Live · View only'] : P.failed ? ['off','Not saved — see message'] : (P.saving || P.dirty) ? ['sync','Saving…'] : ['live','Live' + hm(P.lastSaved)];
     el.dataset.s = st[0]; el.textContent = st[1]; el.title = (P.email ? 'Signed in as ' + P.email + (P.role==='editor' ? ' (editor)' : ' (view only)') + '. ' : 'Not signed in — data stays in this browser. ') + 'Click for details.';
     const b = $('ah-banner');
     if(b && !b.dataset.err){
@@ -3841,10 +3841,10 @@ const persistence = (function(){
     const at = document.querySelector('.tabs button[data-tab="access"]'); if(at) at.hidden = !(P.mode==='shared' && P.staff);
   }
   let errT = null;
-  function fail(msg){
+  function fail(msg, sticky){
     const b = $('ah-banner'); if(!b) return;
     b.dataset.err = '1'; b.textContent = msg; b.classList.add('err');
-    clearTimeout(errT); errT = setTimeout(()=>{ delete b.dataset.err; b.classList.remove('err'); pill(); }, 9000);
+    clearTimeout(errT); P.failed = !!sticky; pill(); if(!sticky) errT = setTimeout(()=>{ delete b.dataset.err; b.classList.remove('err'); pill(); }, 9000);
   }
   let refreshDeferred = false;
   function refreshUI(){
@@ -3889,7 +3889,11 @@ const persistence = (function(){
     if(error){ fail('Could not load the team data: ' + error.message); return false; }
     const d = {active:UTS.active, common:{}};
     P.base = {}; P.ver = {};
-    (data||[]).forEach(r=>{ P.base[r.member_key] = r.data; P.ver[r.member_key] = r.version; if(r.member_key===COMMON) d.common = r.data; else d[r.member_key] = r.data; });
+    const seen = {}, dups = new Set();
+    (data||[]).slice().sort((x,y)=>(x.version||0)-(y.version||0)).forEach(r=>{ if(seen[r.member_key]) dups.add(r.member_key); seen[r.member_key] = 1;
+      P.base[r.member_key] = JSON.parse(js(r.data)); P.ver[r.member_key] = r.version;   // base is a copy: the page state must never share objects with it
+      if(r.member_key===COMMON) d.common = r.data; else d[r.member_key] = r.data; });
+    if(dups.size){ console.warn('[F12221 sync] duplicate rows in members for', [...dups]); fail('The team database holds duplicate records for ' + [...dups].join(', ') + ' (' + STRUCT + '). Using the newest — ask the administrator to remove the older rows and add a unique key on (structure, member_key).', true); }
     P.applyingRemote = true;
     try{ UTS = mergeState(d); try{ localStorage.setItem(STORE_KEY, JSON.stringify(UTS)); }catch(e){} refreshUI(); }
     finally{ P.applyingRemote = false; }
@@ -3912,7 +3916,7 @@ const persistence = (function(){
     const keys = changedKeys(); if(!keys.length){ if(P.dirty){ P.dirty = false; pill(); } return; }
     P.saving = true; pill(); let okAll = true;
     try{ for(const k of keys) okAll = (await saveOne(k)) && okAll; }
-    finally{ P.saving = false; if(okAll) P.lastSaved = new Date(); P.dirty = changedKeys().length > 0; pill(); }
+    finally{ P.saving = false; if(okAll){ P.lastSaved = new Date(); if(P.failed){ P.failed = false; const b = $('ah-banner'); if(b){ delete b.dataset.err; b.classList.remove('err'); } } } P.dirty = changedKeys().length > 0; pill(); }
   }
   async function saveOne(k, attempt){
     const mine = JSON.parse(js(cur(k)));
@@ -3920,15 +3924,18 @@ const persistence = (function(){
     if(P.ver[k]===undefined) res = await P.client.from('members').insert({structure:STRUCT, member_key:k, data:mine}).select('version');
     else res = await P.client.from('members').update({data:mine}).eq('structure', STRUCT).eq('member_key', k).eq('version', P.ver[k]).select('version');
     const ok = !res.error && res.data && res.data.length;
+    console.info('[F12221 sync]', P.ver[k]===undefined ? 'insert' : 'update', k, 'v' + P.ver[k], ok ? '→ v' + res.data[0].version : '→ refused', res.error ? res.error.message : '');
     if(ok){ P.base[k] = mine; P.ver[k] = res.data[0].version; return true; }
     if(res.error && res.error.code!=='23505'){ fail('Could not save ' + (k===COMMON ? 'the inspection details' : k) + ': ' + res.error.message); return false; }
     // someone else saved this member first: merge the fields this user changed over theirs and try once more
     const g = await P.client.from('members').select('data,version').eq('structure', STRUCT).eq('member_key', k).maybeSingle();
     if(g.error || !g.data){ fail('Could not re-read ' + k + ' after a clash: ' + ((g.error && g.error.message) || 'not found')); return false; }
     const merged = merge3(P.base[k] || {}, mine, g.data.data);
-    P.base[k] = g.data.data; P.ver[k] = g.data.version;
+    P.base[k] = JSON.parse(js(g.data.data)); P.ver[k] = g.data.version;
     applyMember(k, merged);
-    if(attempt) { applyMember(k, g.data.data); toast('A teammate saved ' + k + ' at the same moment — their version was kept. Check your last entry.', true); return false; }
+    if(attempt){ console.warn('[F12221 sync] update refused twice for', k, {ver:P.ver[k]});
+      fail('Could not save ' + (k===COMMON ? 'the shared details (scopes, inspection details)' : k) + ': the database did not accept the update. Your change is kept in this browser and will be retried — if this keeps appearing, check the database access rules for the members table.', true);
+      P.dirty = true; setTimeout(()=>schedule(5000), 0); return false; }
     return saveOne(k, true);
   }
   function applyMember(k, data){
@@ -3944,7 +3951,7 @@ const persistence = (function(){
     const k = row.member_key; if(P.ver[k]!==undefined && row.version <= P.ver[k]) return;
     const mine = cur(k), base = P.base[k];
     const dirty = mine && (base===undefined ? !same(mine, k===COMMON ? DEFAULTS.common : DEFAULTS[k]) : !same(mine, base));
-    P.base[k] = row.data; P.ver[k] = row.version;
+    P.base[k] = JSON.parse(js(row.data)); P.ver[k] = row.version;
     applyMember(k, dirty ? merge3(base || {}, mine, row.data) : row.data);
     if(dirty) schedule(400);
     refreshUI();
@@ -4078,6 +4085,7 @@ const persistence = (function(){
   }
 
   // ---- hooks into the page
+  window.addEventListener('beforeunload', e=>{ if(P.mode==='shared' && P.role==='editor' && (P.saving || P.dirty || P.failed)){ flush(); e.preventDefault(); e.returnValue = ''; } });
   const _saveStateLocal = saveState;   // localStorage stays as the offline copy
   saveState = function(){ _saveStateLocal(); if(P.mode==='shared' && !P.applyingRemote) schedule(400); };
   document.addEventListener('click', e=>{ const b = e.target.closest && e.target.closest('button'); if(b && P.mode==='shared') setTimeout(flush, 0); });
