@@ -857,7 +857,7 @@ body.e26-diving .e26-legend{display:none}
           <tr><td class="id">Grid A–E · 1–4</td><td>Pile grid at 12′-0″ centres. Rows A (north) to E (south), columns 1 (west) to 4 (east). Row gridlines are drawn looking north, column gridlines looking east, as sections A-A / B-B (M27) and C-C / D-D (M26). Letters and numbers are this tool's [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">P29-S2</td><td>Pile by its drawing number (17–35, drawing 60-17), split into Sections 1–3 at the bolted splices: Section 1 seabed to the lower splice (RL −9.68 ft), Section 2 to the upper splice (RL 15.45 ft), Section 3 to the pile top. One ITP per pile section.</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">NW3W-S2</td><td>1975 strengthening columns NW3, NE3, SW3, SE3 (M16): twin DN300 pipes at 864 crs, W / E pipe, on column lines 1 and 3 midway between rows. Same section splits as the piles [TBC].</td><td class="sec">Member ID</td></tr>
-          <tr><td class="id">B-12</td><td>Brace on a gridline, numbered from 1: top down, horizontals before diagonals, then left to right as drawn. Horizontals H1–H4 (RL 32.53, 18.74, 4.95, −8.84 ft); X-braces in each 13′-9½″ tier — on the west elevation (gridline 1) each X is a continuous diagonal plus two halves welded to it at the crossing, IDs n A (upper half) and n B (lower half), tiers 1–2 [tier 3 TBC]; in the column bays the braces run from the column at mid-tier to both piles (NA.23 / NA.23A). Tier 3 braces are where the 2022 CIP braces BR01–BR03 (0575-S-001) are fitted — confirm which bays [TBC].</td><td class="sec">Member ID</td></tr>
+          <tr><td class="id">B-12</td><td>Brace on a gridline, numbered from 1: top down, horizontals before diagonals, then left to right as drawn. Horizontals H1–H4 (RL 32.53, 18.74, 4.95, −8.84 ft); X-braces in each 13′-9½″ tier — each X is a continuous diagonal plus two halves welded to it at the crossing: the diagonal whose top end is at the north pile (gridlines 1–4) or the west pile (gridlines A–E) is the split one, IDs n A (upper half, crossing up to that pile) and n B (lower half); in the column bays the braces run from the column at mid-tier to both piles (NA.23 / NA.23A). Tier 3 braces are where the 2022 CIP braces BR01–BR03 (0575-S-001) are fitted — confirm which bays [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">PB-23-22 …</td><td>Plan brace at H4, one per grid cell, after the 1960 plan below LW level [TBC].</td><td class="sec">Member ID</td></tr>
           <tr><td class="id">R01…</td><td>Initial inspection ring, every 500 mm with UT at 12, 3, 6 and 9 o'clock, plus a closing ring at the member end. Vertical: numbered upward, elevation in m rel. LAT. Horizontal and diagonal: mm from datum.</td><td class="sec">Survey H</td></tr>
           <tr><td class="id">AP01…</td><td>Additional inspection point — extra reading, or a pre-filled point moved to suit site conditions.</td><td class="sec">Survey H</td></tr>
@@ -1051,7 +1051,7 @@ COLS.forEach(c=>{ GRIDS[c] = {legs:ROWS.map(r=>pileAt(r,c)).filter(Boolean), loo
 const colIn = (g, a, b) => Object.entries(NCOL).find(([id,o])=>String(o.c)===String(g) && [pileAt(o.rows[0],o.c), pileAt(o.rows[1],o.c)].join()===[a,b].join());
 const TIERS = [[LVL.H1, LVL.M1, LVL.H2, 1], [LVL.H2, LVL.M2, LVL.H3, 2], [LVL.H3, LVL.M3, LVL.H4, 3]];
 const HUBS = [];
-const XSPLIT = {grid:1, tiers:[1,2]};   // west elevation X-braces: continuous diagonal + two halves (site photo 31 Oct 2026); tier 3 [TBC]
+const XSPLIT = {tiers:[1,2,3]};   // every X-brace: continuous diagonal + two halves at the crossing. Split = the diagonal whose top end is at the north pile (gridlines 1–4) or the west pile (gridlines A–E) (31 Oct 2026)
 function gridMembers(g){
   const {legs} = GRIDS[g], out = [];
   const H = (a,b,y,lv)=>out.push({kind:'H', p:pileP(a,y), q:pileP(b,y), so:RP, eo:RP, what:`horizontal H${lv} between piles ${a} and ${b}`, sn:SECNAME(y), datum:`Datum: weld toe at pile ${a}; + axial toward pile ${b}.`});
@@ -1067,8 +1067,8 @@ function gridMembers(g){
       } else {   // X-brace
         out.push({kind:'D', p:pileP(a,yb), q:pileP(b,yt), so:0.25, eo:0.25, what:`tier ${t} X-brace, rising from pile ${a} to ${b}`, sn:SECNAME(ym), cip: t===3, datum:`Datum: lower end at pile ${a}; + axial upward to pile ${b}.`});
         out.push({kind:'D', p:pileP(b,yb), q:pileP(a,yt), so:0.25, eo:0.25, what:`tier ${t} X-brace, rising from pile ${b} to ${a}`, sn:SECNAME(ym), cip: t===3, datum:`Datum: lower end at pile ${b}; + axial upward to pile ${a}.`,
-          split: String(g)===String(XSPLIT.grid) && XSPLIT.tiers.includes(t) ? {a, b, ym, t} : null});
-        if(String(g)===String(XSPLIT.grid) && XSPLIT.tiers.includes(t)) out[out.length-2].what = `tier ${t} X-brace, continuous diagonal rising from pile ${a} to ${b}`;
+          split: XSPLIT.tiers.includes(t) ? {a, b, ym, t} : null});
+        if(XSPLIT.tiers.includes(t)) out[out.length-2].what = `tier ${t} X-brace, continuous diagonal rising from pile ${a} to ${b}`;
       }
     });
   }
